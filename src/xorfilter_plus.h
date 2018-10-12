@@ -4,12 +4,10 @@
 #include <assert.h>
 #include <algorithm>
 
-#include "debug.h"
 #include "hashutil.h"
-#include "printutil.h"
 
 using namespace std;
-using namespace cuckoofilter;
+using namespace hashing;
 
 namespace xorfilter_plus {
 // status returned by a xor filter operation

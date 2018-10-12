@@ -25,7 +25,7 @@
 using uint32_t = ::std::uint32_t;
 using uint64_t = ::std::uint64_t;
 
-template<typename HashFamily = ::cuckoofilter::TwoIndependentMultiplyShift>
+template<typename HashFamily = ::hashing::TwoIndependentMultiplyShift>
 class SimdBlockFilter {
  private:
   // The filter is divided up into Buckets:
@@ -145,7 +145,7 @@ SimdBlockFilter<HashFamily>::Find(const uint64_t key) const noexcept {
 
 /// Rest is copied and pasted to work over 64-byte blocks
 
-template <typename HashFamily = ::cuckoofilter::TwoIndependentMultiplyShift>
+template <typename HashFamily = ::hashing::TwoIndependentMultiplyShift>
 class SimdBlockFilter64 {
 private:
   // The filter is divided up into Buckets:

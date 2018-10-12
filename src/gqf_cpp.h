@@ -4,9 +4,7 @@
 #include <assert.h>
 #include <algorithm>
 
-#include "debug.h"
 #include "hashutil.h"
-#include "printutil.h"
 
 #include "gqf_hashutil.h"
 #include "gqf_hashutil.c"
@@ -15,7 +13,7 @@
 #include "gqf.c"
 
 using namespace std;
-using namespace cuckoofilter;
+using namespace hashing;
 
 namespace gqfilter {
 // status returned by a GQ filter operation

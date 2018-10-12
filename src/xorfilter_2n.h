@@ -4,13 +4,11 @@
 #include <assert.h>
 #include <algorithm>
 
-#include "debug.h"
 #include "hashutil.h"
-#include "printutil.h"
 #include "nbit_array.h"
 
 using namespace std;
-using namespace cuckoofilter;
+using namespace hashing;
 
 namespace xorfilter2n {
 // status returned by a xor filter operation

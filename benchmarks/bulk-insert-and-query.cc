@@ -41,7 +41,7 @@
 #endif
 
 using namespace std;
-
+using namespace hashing;
 using namespace cuckoofilter;
 using namespace xorfilter;
 using namespace xorfilter2;

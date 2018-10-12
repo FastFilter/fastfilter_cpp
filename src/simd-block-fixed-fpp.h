@@ -39,7 +39,7 @@ inline uint64_t rotl64(uint64_t n, unsigned int c) {
     return (n << c) | ( n >> ((-c) & mask));
 }
 
-template<typename HashFamily = ::cuckoofilter::TwoIndependentMultiplyShift>
+template<typename HashFamily = ::hashing::TwoIndependentMultiplyShift>
 class SimdBlockFilterFixed {
  private:
   // The filter is divided up into Buckets:
