@@ -68,7 +68,7 @@ class XorFilter2n {
   explicit XorFilter2n(const size_t size) {
     hasher = new HashFamily();
     this->size = size;
-    this->arrayLength = 3 + 1.23 * size;
+    this->arrayLength = 32 + 1.23 * size;
     this->blockLength = 1;
     while (this->blockLength < arrayLength / 3) {
         this->blockLength *= 2;

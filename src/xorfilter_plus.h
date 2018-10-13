@@ -201,7 +201,7 @@ class XorFilterPlus {
   explicit XorFilterPlus(const size_t size) {
     hasher = new HashFamily();
     this->size = size;
-    this->arrayLength = 3 + 1.23 * size;
+    this->arrayLength = 32 + 1.23 * size;
     this->blockLength = arrayLength / 3;
   }
 

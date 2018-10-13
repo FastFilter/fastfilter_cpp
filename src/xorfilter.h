@@ -58,7 +58,7 @@ class XorFilter {
   explicit XorFilter(const size_t size) {
     hasher = new HashFamily();
     this->size = size;
-    this->arrayLength = 3 + 1.23 * size;
+    this->arrayLength = 32 + 1.23 * size;
     this->blockLength = arrayLength / 3;
     fingerprints = new FingerprintType[arrayLength]();
     std::fill_n(fingerprints, arrayLength, 0);
