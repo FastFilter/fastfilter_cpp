@@ -195,11 +195,6 @@ Status XorFilter2n<ItemType, FingerprintType, FingerprintStorageType, HashFamily
                 }
             }
 
-            // for(size_t i = start; i < end; i++) {
-            //     uint64_t k = keys[i];
-            //     std::cout << k << "\n";
-            // }
-            // std::cout << "end\n";
         }
 
         hashIndex++;

@@ -67,26 +67,6 @@ public:
             }
         }
         counts[numCounts] = c;
-        /*
-        // self-test (should be somewhere else)
-        for(int i=0, j = 0; i<bitCount;i++) {
-            uint64_t bit1 = sourceBits[i >> 6] & (1L << (i & 63));
-            uint64_t bit2 = (bits[i >> 6] >> (i & 63)) & 1;
-            if ((bit2 == 0 ? 0 : 1) != (bit1 == 0 ? 0 : 1)) {
-                std::cout << "WARNING: get incorrect " << i << "\n";
-            }
-            if (rank(i) != j) {
-                std::cout << "WARNING: rank incorrect " << i << "\n";
-            }
-            int rag = getAndPartialRank(i) + (remainingRank(i) << 1);
-            if ((rag >> 1) != j) {
-                std::cout << "WARNING: getAndPartialRank incorrect " << i << "\n";
-            }
-            if (bit2 != 0) {
-                j++;
-            }
-        }
-        */
     }
 
     ~Rank9() {
@@ -259,17 +239,6 @@ Status XorFilterPlus<ItemType, FingerprintType, HashFamily>::AddAll(
                     tmpc[b] = 0;
                 }
             }
-/*
-            int h0 = reduce((int) (hash), blockLength);
-            int h1 = reduce((int) rotl64(hash, 21), blockLength) + blockLength;
-            int h2 = reduce((int) rotl64(hash, 42), blockLength) + 2 * blockLength;
-            t2vals[h0].t2count++;
-            t2vals[h0].t2 ^= hash;
-            t2vals[h1].t2count++;
-            t2vals[h1].t2 ^= hash;
-            t2vals[h2].t2count++;
-            t2vals[h2].t2 ^= hash;
-*/
         }
         for (int b = 0; b < blocks; b++) {
             applyBlock(tmp, b, tmpc[b], t2vals);
@@ -335,38 +304,9 @@ Status XorFilterPlus<ItemType, FingerprintType, HashFamily>::AddAll(
 
         std::cout << "WARNING: hashIndex " << hashIndex << "\n";
         if (hashIndex >= 0) {
-           // size_t outputlimit = 5; // we don't want to spam
             std::cout << (end - start) << " keys; arrayLength " << arrayLength
                 << " blockLength " << blockLength
                 << " reverseOrderPos " << reverseOrderPos << "\n";
-           // int pos = 0;
-           /* for (size_t i = 0; pos < 1000 && i < arrayLength; i++) {
-                if (t2count[i] > 1) {
-                    if(outputlimit > 0) {
-                       std::cout << "  count[" << i << "] = " << (int) t2count[i] << "\n";
-                       outputlimit --;
-                     }
-                }
-            }
-           for(size_t i = start; i < end; i++) {
-                uint64_t k = keys[i];
-                uint64_t hash = (*hasher)(k);
-                int h0 = reduce((int) (hash), blockLength);
-                int h1 = reduce((int) rotl64(hash, 21), blockLength) + blockLength;
-                int h2 = reduce((int) rotl64(hash, 42), blockLength) + 2 * blockLength;
-                if (t2count[h0] > 1 || t2count[h1] > 1 || t2count[h2] > 1) {
-                    if(outputlimit > 0) {
-                      std::cout << "  key " << k << " hash=" << hash << " h0=" << h0 << " h1=" << h1 << " h2=" << h2 << "\n";
-                      outputlimit --;
-                    }
-                }
-            }*/
-
-            // for(size_t i = start; i < end; i++) {
-            //     uint64_t k = keys[i];
-            //     std::cout << k << "\n";
-            // }
-            // std::cout << "end\n";
         }
 
         hashIndex++;
