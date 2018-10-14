@@ -55,8 +55,7 @@ public:
     }
 
     void bulkSet(uint16_t* source, size_t length) {
-        size_t volume_needed = (length / 2)*3 + (length % 1) * 2;
-        assert(volume_needed <= byteCount);
+        assert((length / 2)*3 + (length % 1) * 2 <= byteCount);
         size_t i = 0, j = 0;
         for(; i + 1 < length;) {
             uint32_t a = source[i++];
