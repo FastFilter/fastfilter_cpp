@@ -53,13 +53,22 @@ public:
         memcpy(&word, data + firstBytePos, sizeof(uint32_t));
         return word >> ((index & 1) << 2);
     }
+
     void bulkSet(uint16_t* source, size_t length) {
-        for(size_t i = 0, j = 0; i < length;) {
+        assert((length / 2)*3 + (length % 1) * 2 <= byteCount);
+        size_t i = 0, j = 0;
+        for(; i + 1 < length;) {
             uint32_t a = source[i++];
             uint32_t b = source[i++];
             data[j++] = (uint8_t) (a);
             data[j++] = (uint8_t) ((a >> 8) | (b << 4));
             data[j++] = (uint8_t) (b >> 4);
+        }
+        if(i < length) {
+            uint32_t a = source[i++];
+            uint32_t b = 0; // duh
+            data[j++] = (uint8_t) (a);
+            data[j++] = (uint8_t) ((a >> 8) | (b << 4));
         }
     }
     inline void set(size_t index, uint32_t value) {

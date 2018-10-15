@@ -2,13 +2,13 @@
 OPT = -O3 -DNDEBUG
 #OPT = -g -ggdb
 
-CXXFLAGS += -fno-strict-aliasing -Wall -std=c++11 -I. -I../src/ $(OPT) -march=core-avx2
+CXXFLAGS += -fno-strict-aliasing -Wall -std=c++11 -I. -I../src/ $(OPT) -march=native
 
-LDFLAGS+= -Wall -lpthread -lssl -lcrypto
+LDFLAGS = -Wall 
 
 HEADERS = $(wildcard ../src/*.h) *.h
 
-SRC = ../src/hashutil.cc
+
 
 .PHONY: all
 
@@ -19,5 +19,5 @@ all: $(BINS)
 clean:
 	/bin/rm -f $(BINS)
 
-%.exe: %.cc ${HEADERS} ${SRC} Makefile
-	$(CXX) $(CXXFLAGS) $< -o $@ $(SRC) $(LDFLAGS)
+%.exe: %.cc ${HEADERS}  Makefile
+	$(CXX) $(CXXFLAGS) $< -o $@ $(LDFLAGS)

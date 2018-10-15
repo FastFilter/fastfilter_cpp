@@ -26,7 +26,7 @@ inline uint32_t reduce(uint64_t hash, uint32_t n) {
 // PackedTable to enable semi-sorting
 template <typename ItemType, size_t bits_per_item,
           template <size_t> class TableType = SingleTable,
-          typename HashFamily = TwoIndependentMultiplyShift>
+          typename HashFamily = hashing::TwoIndependentMultiplyShift>
 class CuckooFilterStable {
   // Storage of items
   TableType<bits_per_item> *table_;

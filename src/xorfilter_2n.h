@@ -4,13 +4,11 @@
 #include <assert.h>
 #include <algorithm>
 
-#include "debug.h"
 #include "hashutil.h"
-#include "printutil.h"
 #include "nbit_array.h"
 
 using namespace std;
-using namespace cuckoofilter;
+using namespace hashing;
 
 namespace xorfilter2n {
 // status returned by a xor filter operation
@@ -197,11 +195,6 @@ Status XorFilter2n<ItemType, FingerprintType, FingerprintStorageType, HashFamily
                 }
             }
 
-            // for(size_t i = start; i < end; i++) {
-            //     uint64_t k = keys[i];
-            //     std::cout << k << "\n";
-            // }
-            // std::cout << "end\n";
         }
 
         hashIndex++;

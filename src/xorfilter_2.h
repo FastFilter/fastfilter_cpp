@@ -4,13 +4,11 @@
 #include <assert.h>
 #include <algorithm>
 
-#include "debug.h"
 #include "hashutil.h"
-#include "printutil.h"
 #include "nbit_array.h"
 
 using namespace std;
-using namespace cuckoofilter;
+using namespace hashing;
 
 namespace xorfilter2 {
 // status returned by a xor filter operation
@@ -148,17 +146,7 @@ Status XorFilter2<ItemType, FingerprintType, FingerprintStorageType, HashFamily>
                     tmpc[b] = 0;
                 }
             }
-/*
-            int h0 = reduce((int) (hash), blockLength);
-            int h1 = reduce((int) rotl64(hash, 21), blockLength) + blockLength;
-            int h2 = reduce((int) rotl64(hash, 42), blockLength) + 2 * blockLength;
-            t2vals[h0].t2count++;
-            t2vals[h0].t2 ^= hash;
-            t2vals[h1].t2count++;
-            t2vals[h1].t2 ^= hash;
-            t2vals[h2].t2count++;
-            t2vals[h2].t2 ^= hash;
-*/
+
         }
         for (int b = 0; b < blocks; b++) {
             applyBlock(tmp, b, tmpc[b], t2vals);
@@ -174,7 +162,6 @@ Status XorFilter2<ItemType, FingerprintType, FingerprintStorageType, HashFamily>
             while (nextAloneCheck < arrayLength) {
                 if (t2vals[nextAloneCheck].t2count == 1) {
                     alone[alonePos++] = nextAloneCheck;
-                    // break;
                 }
                 nextAloneCheck++;
             }
@@ -209,38 +196,9 @@ Status XorFilter2<ItemType, FingerprintType, FingerprintStorageType, HashFamily>
 
         std::cout << "WARNING: hashIndex " << hashIndex << "\n";
         if (hashIndex >= 0) {
-           // size_t outputlimit = 5; // we don't want to spam
             std::cout << (end - start) << " keys; arrayLength " << arrayLength
                 << " blockLength " << blockLength
                 << " reverseOrderPos " << reverseOrderPos << "\n";
-           // int pos = 0;
-           /* for (size_t i = 0; pos < 1000 && i < arrayLength; i++) {
-                if (t2count[i] > 1) {
-                    if(outputlimit > 0) {
-                       std::cout << "  count[" << i << "] = " << (int) t2count[i] << "\n";
-                       outputlimit --;
-                     }
-                }
-            }
-           for(size_t i = start; i < end; i++) {
-                uint64_t k = keys[i];
-                uint64_t hash = (*hasher)(k);
-                int h0 = reduce((int) (hash), blockLength);
-                int h1 = reduce((int) rotl64(hash, 21), blockLength) + blockLength;
-                int h2 = reduce((int) rotl64(hash, 42), blockLength) + 2 * blockLength;
-                if (t2count[h0] > 1 || t2count[h1] > 1 || t2count[h2] > 1) {
-                    if(outputlimit > 0) {
-                      std::cout << "  key " << k << " hash=" << hash << " h0=" << h0 << " h1=" << h1 << " h2=" << h2 << "\n";
-                      outputlimit --;
-                    }
-                }
-            }*/
-
-            // for(size_t i = start; i < end; i++) {
-            //     uint64_t k = keys[i];
-            //     std::cout << k << "\n";
-            // }
-            // std::cout << "end\n";
         }
 
         hashIndex++;
