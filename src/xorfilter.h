@@ -144,7 +144,7 @@ Status XorFilter<ItemType, FingerprintType, HashFamily>::AddAll(
 
         int* alone = new int[arrayLength];
         int alonePos = 0;
-        for (int i = 0; i < arrayLength; i++) {
+        for (size_t i = 0; i < arrayLength; i++) {
             if (t2vals[i].t2count == 1) {
                 alone[alonePos++] = i;
             }
