@@ -32,21 +32,8 @@ inline uint32_t reduce(uint32_t hash, uint32_t n) {
 }
 
 size_t getHashFromHash(uint64_t hash, int index, int blockLength) {
-    uint32_t r;
-    switch(index) {
-    case 0:
-        r = (uint32_t) (hash);
-        break;
-    case 1:
-        r = (uint32_t) rotl64(hash, 21);
-        break;
-    default:
-        r = (uint32_t) rotl64(hash, 42);
-        break;
-    }
-    r = reduce(r, blockLength);
-    r = r + index * blockLength;
-    return (size_t) r;
+    uint32_t r = rotl64(hash, index * 21);
+    return (size_t) reduce(r, blockLength) + index * blockLength;
 }
 
 template <typename ItemType, typename FingerprintType,
@@ -68,7 +55,7 @@ class XorFilter {
   explicit XorFilter(const size_t size) {
     hasher = new HashFamily();
     this->size = size;
-    this->arrayLength = 3 + 1.23 * size;
+    this->arrayLength = 32 + 1.23 * size;
     this->blockLength = arrayLength / 3;
     fingerprints = new FingerprintType[arrayLength]();
     std::fill_n(fingerprints, arrayLength, 0);
@@ -154,41 +141,40 @@ Status XorFilter<ItemType, FingerprintType, HashFamily>::AddAll(
         delete[] tmpc;
 
         reverseOrderPos = 0;
+
         int* alone = new int[arrayLength];
         int alonePos = 0;
-        reverseOrderPos = 0;
-        for(size_t nextAloneCheck = 0; nextAloneCheck < arrayLength;) {
-            while (nextAloneCheck < arrayLength) {
-                if (t2vals[nextAloneCheck].t2count == 1) {
-                    alone[alonePos++] = nextAloneCheck;
-                }
-                nextAloneCheck++;
-            }
-            while (alonePos > 0) {
-                int i = alone[--alonePos];
-                if (t2vals[i].t2count == 0) {
-                    continue;
-                }
-                long hash = t2vals[i].t2;
-                uint8_t found = -1;
-                for (int hi = 0; hi < 3; hi++) {
-                    int h = getHashFromHash(hash, hi, blockLength);
-                    int newCount =  -- t2vals[h].t2count;
-                    if (newCount == 0) {
-                        found = (uint8_t) hi;
-                    } else {
-                        if (newCount == 1) {
-                            alone[alonePos++] = h;
-                        }
-                        t2vals[h].t2 ^= hash;
-                    }
-                }
-                reverseOrder[reverseOrderPos] = hash;
-                reverseH[reverseOrderPos] = found;
-                reverseOrderPos++;
+        for (int i = 0; i < arrayLength; i++) {
+            if (t2vals[i].t2count == 1) {
+                alone[alonePos++] = i;
             }
         }
+        reverseOrderPos = 0;
+        while (alonePos > 0 && reverseOrderPos < size) {
+            int i = alone[--alonePos];
+            if (t2vals[i].t2count == 0) {
+                continue;
+            }
+            long hash = t2vals[i].t2;
+            uint8_t found = -1;
+            for (int hi = 0; hi < 3; hi++) {
+                int h = getHashFromHash(hash, hi, blockLength);
+                int newCount =  --t2vals[h].t2count;
+                if (newCount == 0) {
+                    found = (uint8_t) hi;
+                } else {
+                    if (newCount == 1) {
+                        alone[alonePos++] = h;
+                    }
+                    t2vals[h].t2 ^= hash;
+                }
+            }
+            reverseOrder[reverseOrderPos] = hash;
+            reverseH[reverseOrderPos] = found;
+            reverseOrderPos++;
+        }
         delete [] alone;
+
         if (reverseOrderPos == size) {
             break;
         }

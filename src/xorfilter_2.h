@@ -71,7 +71,7 @@ class XorFilter2 {
   explicit XorFilter2(const size_t size) {
     hasher = new HashFamily();
     this->size = size;
-    this->arrayLength = 3 + 1.23 * size;
+    this->arrayLength = 32 + 1.23 * size;
     this->blockLength = arrayLength / 3;
     fingerprints = new FingerprintStorageType(arrayLength);
   }
