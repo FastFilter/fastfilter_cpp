@@ -48,9 +48,9 @@ public:
     // the returned value may contain other high-order bits;
     // call mask() to clear them
     inline uint32_t get(size_t index) {
-        size_t firstBytePos = (index >> 1) + index;
-        uint32_t word;
-        memcpy(&word, data + firstBytePos, sizeof(uint32_t));
+        size_t firstBytePos = (index * 3) / 2;
+        uint16_t word;
+        memcpy(&word, data + firstBytePos, sizeof(uint16_t));
         return word >> ((index & 1) << 2);
     }
 
