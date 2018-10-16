@@ -91,6 +91,43 @@ public:
     }
 };
 
+class UInt10Array {
+    size_t byteCount;
+    uint64_t* data;
+public:
+    UInt10Array(size_t size) {
+        byteCount = size / 6 * 8;
+        data = new uint64_t[(byteCount + 7) / 8]();
+    }
+    ~UInt10Array() {
+        delete[] data;
+    }
+    // the returned value may contain other high-order bits;
+    // call mask() to clear them
+    inline uint32_t get(size_t index) {
+        uint64_t x = data[index / 6];
+        // return (x >> (10 * (index % 6)));
+        int m = 3 * (index % 2) + (index % 3);
+        return x >> (10 * m);
+    }
+    void bulkSet(uint16_t* source, size_t length) {
+        for(size_t index = 0; index < length; index++) {
+            set(index, source[index]);
+        }
+    }
+    inline void set(size_t index, uint32_t value) {
+        // data[index / 6] |= ((uint64_t) value & 0x3ff) << (10 * (index % 6));
+        int m = 3 * (index % 2) + (index % 3);
+        data[index / 6] |= ((uint64_t) value & 0x3ff) << (10 * m);
+    }
+    inline uint32_t mask(uint32_t fingerprint) {
+        return fingerprint & 0x3ff;
+    }
+    size_t getByteCount() {
+        return byteCount;
+    }
+};
+
 template <typename ItemType, size_t bitsPerEntry, uint32_t bitMask = (1 << bitsPerEntry) - 1>
 class NBitArray {
     size_t byteCount;

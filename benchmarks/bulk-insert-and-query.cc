@@ -782,6 +782,13 @@ int main(int argc, char * argv[]) {
       cout << setw(NAME_WIDTH) << "Xor-14" << cf << endl;
   }
 
+  if (algorithmId == 24 || algorithmId < 0) {
+      auto cf = FilterBenchmark<
+          XorFilter2<uint64_t, uint32_t, UInt10Array, SimpleMixSplit>>(
+          add_count, to_add, to_lookup, seed);
+      cout << setw(NAME_WIDTH) << "Xor10.x" << cf << endl;
+  }
+
 
 // broken algorithms (don't always find all key)
 /*
