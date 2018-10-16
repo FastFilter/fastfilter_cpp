@@ -59,8 +59,8 @@ const size_t SAMPLE_SIZE = 10 * 1000 * 1000;
 // The statistics gathered for each table type:
 struct Statistics {
   size_t add_count;
-  double adds_per_nano;
-  map<int, double> finds_per_nano; // The key is the percent of queries that were expected
+  double nanos_per_add;
+  map<int, double> nanos_per_finds; // The key is the percent of queries that were expected
                                    // to be positive
   double false_positive_probabilty;
   double bits_per_item;
@@ -84,15 +84,15 @@ string StatisticsTableHeader(int type_width, int find_percent_count) {
   ostringstream os;
 
   os << string(type_width, ' ');
-  os << setw(12) << right << "million";
+  os << setw(12) << right << "";
   for (int i = 0; i < find_percent_count; ++i) {
     os << setw(8) << "find";
   }
-  os << setw(8) << "" << setw(11) << "" << setw(11)
+  os << setw(9) << "" << setw(11) << "" << setw(11)
      << "optimal" << setw(8) << "wasted" << setw(8) << "million" << endl;
 
   os << string(type_width, ' ');
-  os << setw(12) << right << "adds/sec";
+  os << setw(12) << right << "ns/add";
   for (int i = 0; i < find_percent_count; ++i) {
     os << setw(7)
        << static_cast<int>(100 * i / static_cast<double>(find_percent_count - 1)) << '%';
@@ -106,11 +106,10 @@ string StatisticsTableHeader(int type_width, int find_percent_count) {
 template <class CharT, class Traits>
 basic_ostream<CharT, Traits>& operator<<(
     basic_ostream<CharT, Traits>& os, const Statistics& stats) {
-  constexpr double NANOS_PER_MILLION = 1000;
   os << fixed << setprecision(2) << setw(12) << right
-     << stats.adds_per_nano * NANOS_PER_MILLION;
-  for (const auto& fps : stats.finds_per_nano) {
-    os << setw(8) << fps.second * NANOS_PER_MILLION;
+     << stats.nanos_per_add;
+  for (const auto& fps : stats.nanos_per_finds) {
+    os << setw(8) << fps.second;
   }
   // we get some nonsensical result for very small fpps
   if(stats.false_positive_probabilty > 0.0000001) {
@@ -435,8 +434,9 @@ Statistics FilterBenchmark(
   for (size_t added = 0; added < add_count; ++added) {
     assert(FilterAPI<Table>::Contain(to_add[added], &filter) == 1);
   }
+  auto time = NowNanos() - start_time;
   result.add_count = add_count;
-  result.adds_per_nano = add_count / static_cast<double>(NowNanos() - start_time);
+  result.nanos_per_add = static_cast<double>(time) / add_count;
   result.bits_per_item = static_cast<double>(CHAR_BIT * filter.SizeInBytes()) / add_count;
   ::std::random_device random;
   size_t found_count = 0;
@@ -495,8 +495,8 @@ Statistics FilterBenchmark(
            cerr << "ERROR: This is a potential bug!" << endl;
         }
     }
-    result.finds_per_nano[100 * found_probability] =
-        actual_sample_size / static_cast<double>(lookup_time);
+    result.nanos_per_finds[100 * found_probability] =
+        static_cast<double>(lookup_time) / actual_sample_size;
     if (0.0 == found_probability) {
       ////////////////////////////
       // This is obviously technically wrong!!! The assumption is that there is no overlap between the random
