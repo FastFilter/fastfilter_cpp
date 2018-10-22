@@ -172,7 +172,7 @@ class XorFilterPlus {
   HashFamily* hasher;
 
   inline FingerprintType fingerprint(const uint64_t hash) const {
-    return (FingerprintType) hash;
+    return (FingerprintType) (hash ^ (hash >> 32));
   }
 
  public:
