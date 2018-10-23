@@ -140,6 +140,7 @@ struct FilterAPI<CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>> {
     }
   }
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
+      throw std::runtime_error("Unsupported");
   }
 
   CONTAIN_ATTRIBUTES
@@ -158,6 +159,7 @@ struct FilterAPI<CuckooFilterStable<ItemType, bits_per_item, TableType, HashFami
     }
   }
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
+      throw std::runtime_error("Unsupported");
   }
   static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
@@ -176,6 +178,7 @@ struct FilterAPI<SimdBlockFilter<HashFamily>> {
     table->Add(key);
   }
   static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
+      throw std::runtime_error("Unsupported");
   }
 
   CONTAIN_ATTRIBUTES
@@ -195,6 +198,7 @@ struct FilterAPI<SimdBlockFilterFixed<HashFamily>> {
     table->Add(key);
   }
   static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
+      throw std::runtime_error("Unsupported");
   }
 
   CONTAIN_ATTRIBUTES
@@ -210,6 +214,7 @@ struct FilterAPI<XorFilter<ItemType, FingerprintType>> {
   using Table = XorFilter<ItemType, FingerprintType>;
   static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
   static void Add(uint64_t key, Table* table) {
+      throw std::runtime_error("Unsupported");
   }
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
@@ -226,6 +231,7 @@ struct FilterAPI<XorFilter<ItemType, FingerprintType, HashFamily>> {
   using Table = XorFilter<ItemType, FingerprintType, HashFamily>;
   static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
   static void Add(uint64_t key, Table* table) {
+      throw std::runtime_error("Unsupported");
   }
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
@@ -242,6 +248,7 @@ struct FilterAPI<XorFilter2<ItemType, FingerprintType, FingerprintStorageType, H
   using Table = XorFilter2<ItemType, FingerprintType, FingerprintStorageType, HashFamily>;
   static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
   static void Add(uint64_t key, Table* table) {
+      throw std::runtime_error("Unsupported");
   }
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
@@ -258,6 +265,7 @@ struct FilterAPI<XorFilter2n<ItemType, FingerprintType, FingerprintStorageType, 
   using Table = XorFilter2n<ItemType, FingerprintType, FingerprintStorageType, HashFamily>;
   static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
   static void Add(uint64_t key, Table* table) {
+      throw std::runtime_error("Unsupported");
   }
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
@@ -274,6 +282,7 @@ struct FilterAPI<XorFilterPlus<ItemType, FingerprintType, HashFamily>> {
   using Table = XorFilterPlus<ItemType, FingerprintType, HashFamily>;
   static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
   static void Add(uint64_t key, Table* table) {
+      throw std::runtime_error("Unsupported");
   }
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
@@ -290,6 +299,7 @@ struct FilterAPI<GcsFilter<ItemType, bits_per_item, HashFamily>> {
   using Table = GcsFilter<ItemType, bits_per_item, HashFamily>;
   static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
   static void Add(uint64_t key, Table* table) {
+      throw std::runtime_error("Unsupported");
   }
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
@@ -310,6 +320,7 @@ struct FilterAPI<GQFilter<ItemType, bits_per_item, HashFamily>> {
     table->Add(key);
   }
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
+      throw std::runtime_error("Unsupported");
   }
 
   CONTAIN_ATTRIBUTES
@@ -327,6 +338,7 @@ struct FilterAPI<BloomFilter<ItemType, bits_per_item, HashFamily>> {
     table->Add(key);
   }
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
+      throw std::runtime_error("Unsupported");
   }
 
   CONTAIN_ATTRIBUTES
@@ -389,7 +401,7 @@ bool has_duplicates(vector<uint64_t> a) {
 
 template <typename Table>
 Statistics FilterBenchmark(
-    size_t add_count, const vector<uint64_t>& to_add, const vector<uint64_t>& to_lookup, int seed) {
+    size_t add_count, const vector<uint64_t>& to_add, const vector<uint64_t>& to_lookup, int seed, bool batchedadd = false) {
   if (add_count > to_add.size()) {
     throw out_of_range("to_add must contain at least add_count values");
   }
@@ -424,12 +436,16 @@ Statistics FilterBenchmark(
 
   // Add values until failure or until we run out of values to add:
   auto start_time = NowNanos();
-
-  for (size_t added = 0; added < add_count; ++added) {
-    FilterAPI<Table>::Add(to_add[added], &filter);
+  if(batchedadd) {
+    // for the XorFilter
+    FilterAPI<Table>::AddAll(to_add, 0, add_count, &filter);
+  } else {
+    for (size_t added = 0; added < add_count; ++added) {
+      FilterAPI<Table>::Add(to_add[added], &filter);
+    }
   }
-  // for the XorFilter
-  FilterAPI<Table>::AddAll(to_add, 0, add_count, &filter);
+
+
   // sanity check:
   for (size_t added = 0; added < add_count; ++added) {
     assert(FilterAPI<Table>::Contain(to_add[added], &filter) == 1);
@@ -611,21 +627,21 @@ int main(int argc, char * argv[]) {
   if (algorithmId == 0 || algorithmId < 0) {
       auto cf = FilterBenchmark<
           XorFilter<uint64_t, uint8_t, SimpleMixSplit>>(
-          add_count, to_add, to_lookup, seed);
+          add_count, to_add, to_lookup, seed, true);
       cout << setw(NAME_WIDTH) << "Xor8" << cf << endl;
   }
 
   if (algorithmId == 1 || algorithmId < 0) {
       auto cf = FilterBenchmark<
           XorFilter2<uint64_t, uint32_t, UInt12Array, SimpleMixSplit>>(
-          add_count, to_add, to_lookup, seed);
+          add_count, to_add, to_lookup, seed, true);
       cout << setw(NAME_WIDTH) << "Xor12" << cf << endl;
   }
 
   if (algorithmId == 2 || algorithmId < 0) {
       auto cf = FilterBenchmark<
           XorFilter<uint64_t, uint16_t, SimpleMixSplit>>(
-          add_count, to_add, to_lookup, seed);
+          add_count, to_add, to_lookup, seed, true);
       cout << setw(NAME_WIDTH) << "Xor16" << cf << endl;
   }
 
@@ -696,21 +712,21 @@ int main(int argc, char * argv[]) {
   if (algorithmId == 12 || algorithmId < 0) {
       auto cf = FilterBenchmark<
           XorFilterPlus<uint64_t, uint8_t, SimpleMixSplit>>(
-          add_count, to_add, to_lookup, seed);
+          add_count, to_add, to_lookup, seed, true);
       cout << setw(NAME_WIDTH) << "Xor+8" << cf << endl;
   }
 
   if (algorithmId == 13 || algorithmId < 0) {
       auto cf = FilterBenchmark<
           XorFilterPlus<uint64_t, uint16_t, SimpleMixSplit>>(
-          add_count, to_add, to_lookup, seed);
+          add_count, to_add, to_lookup, seed, true);
       cout << setw(NAME_WIDTH) << "Xor+16" << cf << endl;
   }
 
   if (algorithmId == 14 || algorithmId < 0) {
       auto cf = FilterBenchmark<
           GcsFilter<uint64_t, 8, SimpleMixSplit>>(
-          add_count, to_add, to_lookup, seed);
+          add_count, to_add, to_lookup, seed, true);
       cout << setw(NAME_WIDTH) << "GCS" << cf << endl;
   }
 
@@ -765,28 +781,28 @@ int main(int argc, char * argv[]) {
   if (algorithmId == 21) {
       auto cf = FilterBenchmark<
           XorFilter2n<uint64_t, uint8_t, UIntArray<uint8_t>, SimpleMixSplit>>(
-          add_count, to_add, to_lookup, seed);
+          add_count, to_add, to_lookup, seed, true);
       cout << setw(NAME_WIDTH) << "Xor8-2^n" << cf << endl;
   }
 
   if (algorithmId == 22) {
       auto cf = FilterBenchmark<
           XorFilter2<uint64_t, uint16_t, NBitArray<uint16_t, 10>, SimpleMixSplit>>(
-          add_count, to_add, to_lookup, seed);
+          add_count, to_add, to_lookup, seed, true);
       cout << setw(NAME_WIDTH) << "Xor10" << cf << endl;
   }
 
   if (algorithmId == 23) {
       auto cf = FilterBenchmark<
           XorFilter2<uint64_t, uint16_t, NBitArray<uint16_t, 14>, SimpleMixSplit>>(
-          add_count, to_add, to_lookup, seed);
+          add_count, to_add, to_lookup, seed, true);
       cout << setw(NAME_WIDTH) << "Xor14" << cf << endl;
   }
 
   if (algorithmId == 24) {
       auto cf = FilterBenchmark<
           XorFilter2<uint64_t, uint32_t, UInt10Array, SimpleMixSplit>>(
-          add_count, to_add, to_lookup, seed);
+          add_count, to_add, to_lookup, seed, true);
       cout << setw(NAME_WIDTH) << "Xor10.x" << cf << endl;
   }
 
