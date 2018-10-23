@@ -101,6 +101,32 @@ void applyBlock(uint64_t* tmp, int b, int len, t2val_t * t2vals) {
     }
 }
 
+int applyBlock2(uint64_t* tmp, int b, int len, t2val_t * t2vals, int* alone, int alonePos) {
+    for (int i = 0; i < len; i += 2) {
+        uint64_t hash = tmp[(b << BLOCK_SHIFT) + i];
+        int index = (int) tmp[(b << BLOCK_SHIFT) + i + 1];
+        int oldCount = t2vals[index].t2count;
+// std::cout << " consume index " << index << " hash " << hash << " oldCount " << oldCount << " i " << i << "\n";
+/*
+                    int newCount = --t2vals[h].t2count;
+                    if (newCount == 1) {
+                        alone[alonePos++] = h;
+                    }
+                    t2vals[h].t2 ^= hash;
+*/
+
+        if (oldCount >= 1) {
+            int newCount = oldCount - 1;
+            t2vals[index].t2count = newCount;
+            if (newCount == 1) {
+                alone[alonePos++] = index;
+            }
+            t2vals[index].t2 ^= hash;
+        }
+    }
+    return alonePos;
+}
+
 template <typename ItemType, typename FingerprintType,
           typename HashFamily>
 Status XorFilter<ItemType, FingerprintType, HashFamily>::AddAll(
@@ -139,9 +165,119 @@ Status XorFilter<ItemType, FingerprintType, HashFamily>::AddAll(
         }
         delete[] tmp;
         delete[] tmpc;
-
         reverseOrderPos = 0;
 
+        int* alone = new int[arrayLength];
+        int alonePos = 0;
+        for (size_t i = 0; i < arrayLength; i++) {
+            if (t2vals[i].t2count == 1) {
+                alone[alonePos++] = i;
+            }
+        }
+
+        tmp = new uint64_t[blocks * BLOCK_LEN];
+        tmpc = new int[blocks]();
+
+        reverseOrderPos = 0;
+        while (reverseOrderPos < size) {
+
+            if (alonePos == 0) {
+                int bestb = -1, bb = -1;
+                for (int b = 0; b < blocks && alonePos == 0; b++) {
+                    if (tmpc[b] > bestb) {
+                        bestb = tmpc[b];
+                        bb = b;
+                    }
+                }
+                if (tmpc[bb] > 0) {
+                    alonePos = applyBlock2(tmp, bb, tmpc[bb], t2vals, alone, alonePos);
+                    tmpc[bb] = 0;
+                }
+                if (alonePos == 0) {
+                    for (int b = 0; b < blocks && alonePos == 0; b++) {
+                        if (tmpc[b] > 0) {
+                            alonePos = applyBlock2(tmp, b, tmpc[b], t2vals, alone, alonePos);
+                            tmpc[b] = 0;
+                        }
+                    }
+                }
+         //       std::cout << "now alone " << alonePos << "\n";
+            }
+
+            if (alonePos == 0) {
+                break;
+            }
+
+            int i = alone[--alonePos];
+
+            int b = i >> BLOCK_SHIFT;
+            if (tmpc[b] > 0) {
+                alonePos = applyBlock2(tmp, b, tmpc[b], t2vals, alone, alonePos);
+                tmpc[b] = 0;
+            }
+
+            uint8_t found = -1;
+            if (t2vals[i].t2count == 0) {
+                continue;
+            }
+// if (t2vals[i].t2count > 100 || t2vals[i].t2count < 0) {
+//std::cout << "UNEXPECTED " << i << " = " << t2vals[i].t2count << "\n";
+//}
+            long hash = t2vals[i].t2;
+//if (hash == 0) {
+// std::cout << "UNEXPECTED hash " << i << " = " << t2vals[i].t2count << "\n";
+//}
+
+            for (int hi = 0; hi < 3; hi++) {
+                int h = getHashFromHash(hash, hi, blockLength);
+                if (h == i) {
+                    found = (uint8_t) hi;
+//if (t2vals[i].t2count != 1) {
+//    std::cout << " NOT 1 " << t2vals[i].t2count << "\n";
+//}
+                    t2vals[i].t2count = 0;
+                } else {
+//std::cout << " add index " << h << " hash " << hash << " hi " << hi << "\n";
+
+                    int b = h >> BLOCK_SHIFT;
+                    int i2 = tmpc[b];
+                    tmp[(b << BLOCK_SHIFT) + i2] = hash;
+                    tmp[(b << BLOCK_SHIFT) + i2 + 1] = h;
+                    tmpc[b] += 2;
+                    if (tmpc[b] >= BLOCK_LEN) {
+                        alonePos = applyBlock2(tmp, b, tmpc[b], t2vals, alone, alonePos);
+                        tmpc[b] = 0;
+                    }
+/*
+
+                    int newCount = --t2vals[h].t2count;
+                    if (newCount == 1) {
+                        alone[alonePos++] = h;
+                    }
+                    t2vals[h].t2 ^= hash;
+*/
+                }
+            }
+// std::cout << " add " << hash << " found " << (int) found << "\n";
+
+            reverseOrder[reverseOrderPos] = hash;
+
+//if (found < 0) {
+//    std::cout << " NOT FOUND " << hash << "\n";
+//}
+            reverseH[reverseOrderPos] = found;
+            reverseOrderPos++;
+
+
+        }
+
+        delete[] tmp;
+        delete[] tmpc;
+
+        delete [] alone;
+
+
+/*
         int* alone = new int[arrayLength];
         int alonePos = 0;
         for (size_t i = 0; i < arrayLength; i++) {
@@ -174,6 +310,66 @@ Status XorFilter<ItemType, FingerprintType, HashFamily>::AddAll(
             reverseOrderPos++;
         }
         delete [] alone;
+*/
+
+
+
+/*
+        int* alone = new int[blocks * BLOCK_LEN];
+        int* alonePos = new int[blocks]();
+        for (size_t i = 0; i < arrayLength; i++) {
+            if (t2vals[i].t2count == 1) {
+                int b = i >> BLOCK_SHIFT;
+                // TODO could in theory go over the limit
+                int p = alonePos[b]++;
+                alone[(b << BLOCK_SHIFT) + p] = i;
+            }
+        }
+        reverseOrderPos = 0;
+
+        int currentBlock = 0;
+        while (reverseOrderPos < size) {
+            if (alonePos[currentBlock] == 0) {
+                for(int i=0, b=currentBlock + 1; i<blocks; i++, b++) {
+                    if (b > blocks) {
+                        b = 0;
+                    }
+                    if (alonePos[b] > 0) {
+                        currentBlock = b;
+                        break;
+                    }
+                }
+            }
+            if (alonePos[currentBlock] == 0) {
+                break;
+            }
+            int i = (b << BLOCK_SHIFT) + alone[--alonePos[currentBlock]];
+            if (t2vals[i].t2count == 0) {
+                continue;
+            }
+            long hash = t2vals[i].t2;
+            uint8_t found = -1;
+            for (int hi = 0; hi < 3; hi++) {
+                int h = getHashFromHash(hash, hi, blockLength);
+                int newCount =  --t2vals[h].t2count;
+                if (newCount == 0) {
+                    found = (uint8_t) hi;
+                } else {
+                    if (newCount == 1) {
+                        alone[alonePos++] = h;
+                    }
+                    t2vals[h].t2 ^= hash;
+                }
+            }
+            reverseOrder[reverseOrderPos] = hash;
+            reverseH[reverseOrderPos] = found;
+            reverseOrderPos++;
+        }
+        delete [] alone;
+*/
+
+
+
 
         if (reverseOrderPos == size) {
             break;
