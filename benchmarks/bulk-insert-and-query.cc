@@ -456,8 +456,8 @@ Statistics FilterBenchmark(
 #ifdef __linux__
     unified.end(results);
     printf("cycles: %10.zu (%10.3f per key) instructions: %10.zu (%10.3f per key, %10.3f per cycle) cache misses: %10.zu (%10.3f per key) branch misses: %10.zu (%10.3f per key)\n",
-      (size_t)results[0], results[0]*1.0/to_lookup_mixed.size(), (size_t)results[1], results[1]*1.0/to_lookup_mixed.size() , results[1]*1.0/results[0], (size_t)results[2], results[2]*1.0/to_lookup_mixed.size(),
-      (size_t)results[3], results[3] * 1.0/to_lookup_mixed.size());
+      (size_t)results[0], results[0]*1.0/add_count, (size_t)results[1], results[1]*1.0/add_count , results[1]*1.0/results[0], (size_t)results[2], results[2]*1.0/add_count,
+      (size_t)results[3], results[3] * 1.0/add_count);
 #else
    std::cout << "." << std::flush;
 #endif
