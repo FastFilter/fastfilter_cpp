@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <vector>
 
+// this can be atrociously slow
 template <class RNG = ::std::random_device>
 ::std::vector<::std::uint64_t> GenerateRandom64(::std::size_t count) {
   ::std::vector<::std::uint64_t> result(count);

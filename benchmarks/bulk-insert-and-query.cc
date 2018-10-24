@@ -454,7 +454,6 @@ Statistics FilterBenchmark(
   result.add_count = add_count;
   result.nanos_per_add = static_cast<double>(time) / add_count;
   result.bits_per_item = static_cast<double>(CHAR_BIT * filter.SizeInBytes()) / add_count;
-  ::std::random_device random;
   size_t found_count = 0;
 #ifdef __linux__
   vector<int> evts;
@@ -591,10 +590,10 @@ int main(int argc, char * argv[]) {
       }
   }
   vector<uint64_t> to_add = seed == -1 ?
-      GenerateRandom64<::std::random_device>(add_count) :
+      GenerateRandom64Fast(add_count, rand()) :
       GenerateRandom64Fast(add_count, seed);
   vector<uint64_t> to_lookup = seed == -1 ?
-      GenerateRandom64<::std::random_device>(SAMPLE_SIZE) :
+      GenerateRandom64Fast(SAMPLE_SIZE, rand()) :
       GenerateRandom64Fast(SAMPLE_SIZE, seed + add_count);
   if (seed >= 0 && seed < 64) {
     // 0-64 are special seeds
@@ -623,7 +622,6 @@ int main(int argc, char * argv[]) {
   constexpr int NAME_WIDTH = 32;
 
   cout << StatisticsTableHeader(NAME_WIDTH, 5) << endl;
-
   if (algorithmId == 0 || algorithmId < 0) {
       auto cf = FilterBenchmark<
           XorFilter<uint64_t, uint8_t, SimpleMixSplit>>(
