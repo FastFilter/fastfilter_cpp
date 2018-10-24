@@ -418,6 +418,20 @@ Statistics FilterBenchmark(
 
   Table filter = FilterAPI<Table>::ConstructFromAddCount(add_count);
   Statistics result;
+#ifdef __linux__
+  vector<int> evts;
+  evts.push_back(PERF_COUNT_HW_CPU_CYCLES);
+  evts.push_back(PERF_COUNT_HW_INSTRUCTIONS);
+  evts.push_back(PERF_COUNT_HW_CACHE_MISSES);
+  evts.push_back(PERF_COUNT_HW_BRANCH_MISSES);
+  LinuxEvents<PERF_TYPE_HARDWARE> unified(evts);
+  vector<unsigned long long> results;
+  results.resize(evts.size());
+  cout << endl;
+  unified.start();
+#else
+   std::cout << "-" << std::flush;
+#endif
 
   // Add values until failure or until we run out of values to add:
   auto start_time = NowNanos();
@@ -433,53 +447,50 @@ Statistics FilterBenchmark(
   }
   std::cout << "\r             \r" << std::flush;
 
-
   // sanity check:
   for (size_t added = 0; added < add_count; ++added) {
     assert(FilterAPI<Table>::Contain(to_add[added], &filter) == 1);
   }
   auto time = NowNanos() - start_time;
-  result.add_count = add_count;
-  result.nanos_per_add = static_cast<double>(time) / add_count;
-  result.bits_per_item = static_cast<double>(CHAR_BIT * filter.SizeInBytes()) / add_count;
-  size_t found_count = 0;
-#ifdef __linux__
-  vector<int> evts;
-  evts.push_back(PERF_COUNT_HW_CPU_CYCLES);
-  evts.push_back(PERF_COUNT_HW_INSTRUCTIONS);
-  evts.push_back(PERF_COUNT_HW_CACHE_MISSES);
-  evts.push_back(PERF_COUNT_HW_BRANCH_MISSES);
-  LinuxEvents<PERF_TYPE_HARDWARE> unified(evts);
-  vector<unsigned long long> results;
-  results.resize(evts.size());
-  cout << endl;
-#endif
 
-  for (auto t :  mixed_sets) {
-    const double found_probability = t.found_probability;
-    const auto to_lookup_mixed =  t.to_lookup_mixed ;
-    size_t true_match = t.true_match ;
-
-    const auto start_time = NowNanos();
-    found_count = 0;
-#ifdef __linux__
-    unified.start();
-#else
-   std::cout << "-" << std::flush;
-#endif
-    for (const auto v : to_lookup_mixed) {
-      found_count += FilterAPI<Table>::Contain(v, &filter);
-    }
 #ifdef __linux__
     unified.end(results);
-    printf("cycles = %10.zu (cycles per key %10.3f) instructions = %10.zu (ins/key %10.3f,ins/cycles %10.3f) cache misses = %10.zu (misses per keys %10.3f) branch misses = %10.zu (misses per keys %10.3f) \n",
+    printf("cycles: %10.zu (%10.3f per key) instructions: %10.zu (%10.3f per key, %10.3f per cycle) cache misses: %10.zu (%10.3f per key) branch misses: %10.zu (%10.3f per key)\n",
       (size_t)results[0], results[0]*1.0/to_lookup_mixed.size(), (size_t)results[1], results[1]*1.0/to_lookup_mixed.size() , results[1]*1.0/results[0], (size_t)results[2], results[2]*1.0/to_lookup_mixed.size(),
       (size_t)results[3], results[3] * 1.0/to_lookup_mixed.size());
 #else
    std::cout << "." << std::flush;
 #endif
 
+  result.add_count = add_count;
+  result.nanos_per_add = static_cast<double>(time) / add_count;
+  result.bits_per_item = static_cast<double>(CHAR_BIT * filter.SizeInBytes()) / add_count;
+  size_t found_count = 0;
+
+  for (auto t :  mixed_sets) {
+    const double found_probability = t.found_probability;
+    const auto to_lookup_mixed =  t.to_lookup_mixed ;
+    size_t true_match = t.true_match ;
+
+#ifdef __linux__
+    unified.start();
+#else
+   std::cout << "-" << std::flush;
+#endif
+    const auto start_time = NowNanos();
+    found_count = 0;
+    for (const auto v : to_lookup_mixed) {
+      found_count += FilterAPI<Table>::Contain(v, &filter);
+    }
     const auto lookup_time = NowNanos() - start_time;
+#ifdef __linux__
+    unified.end(results);
+    printf("cycles: %10.zu (%10.3f per key) instructions: %10.zu (%10.3f per key, %10.3f per cycle) cache misses: %10.zu (%10.3f per key) branch misses: %10.zu (%10.3f per key)\n",
+      (size_t)results[0], results[0]*1.0/to_lookup_mixed.size(), (size_t)results[1], results[1]*1.0/to_lookup_mixed.size() , results[1]*1.0/results[0], (size_t)results[2], results[2]*1.0/to_lookup_mixed.size(),
+      (size_t)results[3], results[3] * 1.0/to_lookup_mixed.size());
+#else
+   std::cout << "." << std::flush;
+#endif
 
     if (found_count < true_match) {
            cerr << "ERROR: Expected to find at least " << true_match << " found " << found_count << endl;
