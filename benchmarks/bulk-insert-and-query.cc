@@ -198,7 +198,7 @@ struct FilterAPI<SimdBlockFilterFixed<HashFamily>> {
     table->Add(key);
   }
   static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
-      throw std::runtime_error("Unsupported");
+    table->AddAll(keys, start, end);
   }
 
   CONTAIN_ATTRIBUTES
@@ -408,7 +408,7 @@ typedef struct samples samples_t;
 
 template <typename Table>
 Statistics FilterBenchmark(
-    size_t add_count, const vector<uint64_t>& to_add, size_t distinct_add, const vector<uint64_t>& to_lookup, size_t distinct_lookup, 
+    size_t add_count, const vector<uint64_t>& to_add, size_t distinct_add, const vector<uint64_t>& to_lookup, size_t distinct_lookup,
     size_t intersectionsize, bool hasduplicates,
     const std::vector<samples_t> & mixed_sets, int seed, bool batchedadd = false) {
   if (add_count > to_add.size()) {
@@ -503,7 +503,7 @@ Statistics FilterBenchmark(
   }
 #ifndef __linux__
   std::cout <<"\r"; // roll back the line
-#endif 
+#endif
   return result;
 }
 
@@ -550,7 +550,8 @@ int main(int argc, char * argv[]) {
    {8,"Bloom12" }, {9,"Bloom16"}, {10,"BlockedBloom"},
    {11,"sort"}, {12,"Xor+8"}, {13,"Xor+16"},
    {14,"GCS"}, {15,"CQF"},  {37,"Bloom8 (addall)"},
-   {38,"Bloom12 (addall)"},{39,"Bloom16 (addall)"}
+   {38,"Bloom12 (addall)"},{39,"Bloom16 (addall)"},
+   {40,"BlockedBloom (addall)"}
   };
   if (argc < 2) {
     cout << "Usage: " << argv[0] << " <numberOfEntries> [<algorithmId> [<seed>]]" << endl;
@@ -576,7 +577,7 @@ int main(int argc, char * argv[]) {
       if(strstr(argv[2],",") != NULL) {
         // we have a list of algos
         algorithmId = 9999999; // disabling
-        parse_comma_separated(argv[2], algos);      
+        parse_comma_separated(argv[2], algos);
       } else {
         stringstream input_string_2(argv[2]);
         input_string_2 >> algorithmId;
@@ -886,6 +887,15 @@ int main(int argc, char * argv[]) {
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
       cout << setw(NAME_WIDTH) << names[39] << cf << endl;
   }
+
+#ifdef __AVX2__
+  if (algorithmId == 40 || algorithmId < 0) {
+      auto cf = FilterBenchmark<SimdBlockFilterFixed<SimpleMixSplit>>(
+          add_count, to_add, to_lookup, seed, true);
+      cout << setw(NAME_WIDTH) << names[40] << cf << endl;
+  }
+#endif
+
 
 
 // broken algorithms (don't always find all key)
