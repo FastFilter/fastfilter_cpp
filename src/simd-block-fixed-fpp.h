@@ -56,6 +56,10 @@ class SimdBlockFilterFixed {
   explicit SimdBlockFilterFixed(const int bits);
   ~SimdBlockFilterFixed() noexcept;
   void Add(const uint64_t key) noexcept;
+
+  // Add multiple items to the filter.
+  void AddAll(const vector<uint64_t> data, const size_t start, const size_t end);
+
   bool Find(const uint64_t key) const noexcept;
   uint64_t SizeInBytes() const { return sizeof(Bucket) * bucketCount; }
 
@@ -63,6 +67,8 @@ class SimdBlockFilterFixed {
   // A helper function for Insert()/Find(). Turns a 32-bit hash into a 256-bit Bucket
   // with 1 single 1-bit set in each 32-bit lane.
   static __m256i MakeMask(const uint32_t hash) noexcept;
+
+  void ApplyBlock(uint64_t* tmp, int block, int len);
 
 };
 
@@ -121,6 +127,47 @@ SimdBlockFilterFixed<HashFamily>::Add(const uint64_t key) noexcept {
   const __m256i mask = MakeMask(hash);
   __m256i* const bucket = &reinterpret_cast<__m256i*>(directory_)[bucket_idx];
   _mm256_store_si256(bucket, _mm256_or_si256(*bucket, mask));
+}
+
+const int blockShift = 14;
+const int blockLen = 1 << blockShift;
+
+template<typename HashFamily>
+void SimdBlockFilterFixed<HashFamily>::ApplyBlock(uint64_t* tmp, int block, int len) {
+    for (int i = 0; i < len; i += 2) {
+        uint64_t hash = tmp[(block << blockShift) + i];
+        uint32_t bucket_idx = tmp[(block << blockShift) + i + 1];
+        const __m256i mask = MakeMask(hash);
+        __m256i* const bucket = &reinterpret_cast<__m256i*>(directory_)[bucket_idx];
+        _mm256_store_si256(bucket, _mm256_or_si256(*bucket, mask));
+    }
+}
+
+template<typename HashFamily>
+void SimdBlockFilterFixed<HashFamily>::AddAll(
+    const vector<uint64_t> keys, const size_t start, const size_t end) {
+    int blocks = 1 + bucketCount / blockLen;
+    uint64_t* tmp = new uint64_t[blocks * blockLen];
+    int* tmpLen = new int[blocks]();
+    for(size_t i = start; i < end; i++) {
+        uint64_t key = keys[i];
+        uint64_t hash = hasher_(key);
+        uint32_t bucket_idx = reduce(rotl64(hash, 32), bucketCount);
+        int block = bucket_idx >> blockShift;
+        int len = tmpLen[block];
+        tmp[(block << blockShift) + len] = hash;
+        tmp[(block << blockShift) + len + 1] = bucket_idx;
+        tmpLen[block] = len + 2;
+        if (len + 2 == blockLen) {
+            ApplyBlock(tmp, block, len + 1);
+            tmpLen[block] = 0;
+        }
+    }
+    for (int block = 0; block < blocks; block++) {
+        ApplyBlock(tmp, block, tmpLen[block]);
+    }
+    delete[] tmp;
+    delete[] tmpLen;
 }
 
 template <typename HashFamily>
