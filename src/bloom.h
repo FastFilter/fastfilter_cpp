@@ -31,28 +31,6 @@ inline uint64_t getBit(uint32_t index) {
     return 1L << (index & 63);
 }
 
-// https://stackoverflow.com/questions/30052316/find-next-prime-number-algorithm
-bool isPrime(int number) {
-    if (number == 2 || number == 3)
-        return true;
-    if (number % 2 == 0 || number % 3 == 0)
-        return false;
-    int divisor = 6;
-    while (divisor * divisor - 2 * divisor + 1 <= number) {
-        if (number % (divisor - 1) == 0)
-            return false;
-        if (number % (divisor + 1) == 0)
-            return false;
-        divisor += 6;
-    }
-    return true;
-}
-
-int nextPrime(int a) {
-    while (!isPrime(++a));
-    return a;
-}
-
 template <typename ItemType, size_t bits_per_item,
     typename HashFamily = TwoIndependentMultiplyShift,
     int k = (int) ((double) bits_per_item * 0.693147180559945 + 0.5)>
@@ -71,7 +49,7 @@ class BloomFilter {
   explicit BloomFilter(const size_t n) : hasher() {
     this->size = 0;
     this->kk = getBestK(bits_per_item);
-    this->bitCount = nextPrime(n * bits_per_item);
+    this->bitCount = n * bits_per_item;
     this->arrayLength = (bitCount + 63) / 64;
     data = new uint64_t[arrayLength];
     std::fill_n(data, arrayLength, 0);
