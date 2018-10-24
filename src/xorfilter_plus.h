@@ -346,9 +346,7 @@ Status XorFilterPlus<ItemType, FingerprintType, HashFamily>::AddAll(
     delete [] reverseH;
 
     uint64_t bitCount = blockLength;
-    size_t wordlen = (bitCount + 63) / 64;
-    uint64_t *bits = new uint64_t[wordlen];//was /63 but it is suspicious
-    memset(bits,0,wordlen*sizeof(uint64_t)); // seems wrong that there is no init
+    uint64_t *bits = new uint64_t[(bitCount + 63) / 64]();
     int setBits = 0;
     for (size_t i = 0; i < blockLength; i++) {
         FingerprintType f = fp[i + 2 * blockLength];
