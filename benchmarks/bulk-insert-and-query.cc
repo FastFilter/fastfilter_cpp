@@ -338,7 +338,7 @@ struct FilterAPI<BloomFilter<ItemType, bits_per_item, HashFamily>> {
     table->Add(key);
   }
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
-      throw std::runtime_error("Unsupported");
+    table->AddAll(keys, start, end);
   }
 
   CONTAIN_ATTRIBUTES
@@ -804,6 +804,28 @@ int main(int argc, char * argv[]) {
           XorFilter2<uint64_t, uint32_t, UInt10Array, SimpleMixSplit>>(
           add_count, to_add, to_lookup, seed, true);
       cout << setw(NAME_WIDTH) << "Xor10.x" << cf << endl;
+  }
+
+
+  if (algorithmId == 37 || algorithmId < 0) {
+      auto cf = FilterBenchmark<
+          BloomFilter<uint64_t, 8, SimpleMixSplit>>(
+          add_count, to_add, to_lookup, seed, true);
+      cout << setw(NAME_WIDTH) << "Bloom8" << cf << endl;
+  }
+
+  if (algorithmId == 38 || algorithmId < 0) {
+      auto cf = FilterBenchmark<
+          BloomFilter<uint64_t, 12, SimpleMixSplit>>(
+          add_count, to_add, to_lookup, seed, true);
+      cout << setw(NAME_WIDTH) << "Bloom12" << cf << endl;
+  }
+
+  if (algorithmId == 39 || algorithmId < 0) {
+      auto cf = FilterBenchmark<
+          BloomFilter<uint64_t, 16, SimpleMixSplit>>(
+          add_count, to_add, to_lookup, seed, true);
+      cout << setw(NAME_WIDTH) << "Bloom16" << cf << endl;
   }
 
 
