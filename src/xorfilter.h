@@ -48,7 +48,7 @@ class XorFilter {
   HashFamily* hasher;
 
   inline FingerprintType fingerprint(const uint64_t hash) const {
-    return (FingerprintType) hash;
+    return (FingerprintType) hash ^ (hash >> 32);
   }
 
  public:
@@ -106,15 +106,6 @@ int applyBlock2(uint64_t* tmp, int b, int len, t2val_t * t2vals, int* alone, int
         uint64_t hash = tmp[(b << BLOCK_SHIFT) + i];
         int index = (int) tmp[(b << BLOCK_SHIFT) + i + 1];
         int oldCount = t2vals[index].t2count;
-// std::cout << " consume index " << index << " hash " << hash << " oldCount " << oldCount << " i " << i << "\n";
-/*
-                    int newCount = --t2vals[h].t2count;
-                    if (newCount == 1) {
-                        alone[alonePos++] = h;
-                    }
-                    t2vals[h].t2 ^= hash;
-*/
-
         if (oldCount >= 1) {
             int newCount = oldCount - 1;
             t2vals[index].t2count = newCount;
@@ -174,25 +165,36 @@ Status XorFilter<ItemType, FingerprintType, HashFamily>::AddAll(
                 alone[alonePos++] = i;
             }
         }
-
         tmp = new uint64_t[blocks * BLOCK_LEN];
         tmpc = new int[blocks]();
-
         reverseOrderPos = 0;
+        int bestBlock = -1;
         while (reverseOrderPos < size) {
-
             if (alonePos == 0) {
-                int bestb = -1, bb = -1;
-                for (int b = 0; b < blocks && alonePos == 0; b++) {
-                    if (tmpc[b] > bestb) {
-                        bestb = tmpc[b];
-                        bb = b;
+                // we need to apply blocks until we have an entry that is alone
+                // (that is, until alonePos > 0)
+                // so, find a large block (the larger the better)
+                // but don't need to search very long
+                // start searching where we stopped the last time
+                // (to make it more even)
+                for (int i = 0, b = bestBlock + 1, best = -1; i < blocks; i++) {
+                    if (b >= blocks) {
+                        b = 0;
+                    }
+                    if (tmpc[b] > best) {
+                        best = tmpc[b];
+                        bestBlock = b;
+                        if (best > BLOCK_LEN / 2) {
+                            // sufficiently large: stop
+                            break;
+                        }
                     }
                 }
-                if (tmpc[bb] > 0) {
-                    alonePos = applyBlock2(tmp, bb, tmpc[bb], t2vals, alone, alonePos);
-                    tmpc[bb] = 0;
+                if (tmpc[bestBlock] > 0) {
+                    alonePos = applyBlock2(tmp, bestBlock, tmpc[bestBlock], t2vals, alone, alonePos);
+                    tmpc[bestBlock] = 0;
                 }
+                // applying a block may not actually result in a new entry that is alone
                 if (alonePos == 0) {
                     for (int b = 0; b < blocks && alonePos == 0; b++) {
                         if (tmpc[b] > 0) {
@@ -201,44 +203,27 @@ Status XorFilter<ItemType, FingerprintType, HashFamily>::AddAll(
                         }
                     }
                 }
-         //       std::cout << "now alone " << alonePos << "\n";
             }
-
             if (alonePos == 0) {
                 break;
             }
-
             int i = alone[--alonePos];
-
             int b = i >> BLOCK_SHIFT;
             if (tmpc[b] > 0) {
                 alonePos = applyBlock2(tmp, b, tmpc[b], t2vals, alone, alonePos);
                 tmpc[b] = 0;
             }
-
             uint8_t found = -1;
             if (t2vals[i].t2count == 0) {
                 continue;
             }
-// if (t2vals[i].t2count > 100 || t2vals[i].t2count < 0) {
-//std::cout << "UNEXPECTED " << i << " = " << t2vals[i].t2count << "\n";
-//}
             long hash = t2vals[i].t2;
-//if (hash == 0) {
-// std::cout << "UNEXPECTED hash " << i << " = " << t2vals[i].t2count << "\n";
-//}
-
             for (int hi = 0; hi < 3; hi++) {
                 int h = getHashFromHash(hash, hi, blockLength);
                 if (h == i) {
                     found = (uint8_t) hi;
-//if (t2vals[i].t2count != 1) {
-//    std::cout << " NOT 1 " << t2vals[i].t2count << "\n";
-//}
                     t2vals[i].t2count = 0;
                 } else {
-//std::cout << " add index " << h << " hash " << hash << " hi " << hi << "\n";
-
                     int b = h >> BLOCK_SHIFT;
                     int i2 = tmpc[b];
                     tmp[(b << BLOCK_SHIFT) + i2] = hash;
@@ -248,34 +233,15 @@ Status XorFilter<ItemType, FingerprintType, HashFamily>::AddAll(
                         alonePos = applyBlock2(tmp, b, tmpc[b], t2vals, alone, alonePos);
                         tmpc[b] = 0;
                     }
-/*
-
-                    int newCount = --t2vals[h].t2count;
-                    if (newCount == 1) {
-                        alone[alonePos++] = h;
-                    }
-                    t2vals[h].t2 ^= hash;
-*/
                 }
             }
-// std::cout << " add " << hash << " found " << (int) found << "\n";
-
             reverseOrder[reverseOrderPos] = hash;
-
-//if (found < 0) {
-//    std::cout << " NOT FOUND " << hash << "\n";
-//}
             reverseH[reverseOrderPos] = found;
             reverseOrderPos++;
-
-
         }
-
         delete[] tmp;
         delete[] tmpc;
-
         delete [] alone;
-
 
 /*
         int* alone = new int[arrayLength];
@@ -312,65 +278,6 @@ Status XorFilter<ItemType, FingerprintType, HashFamily>::AddAll(
         delete [] alone;
 */
 
-
-
-/*
-        int* alone = new int[blocks * BLOCK_LEN];
-        int* alonePos = new int[blocks]();
-        for (size_t i = 0; i < arrayLength; i++) {
-            if (t2vals[i].t2count == 1) {
-                int b = i >> BLOCK_SHIFT;
-                // TODO could in theory go over the limit
-                int p = alonePos[b]++;
-                alone[(b << BLOCK_SHIFT) + p] = i;
-            }
-        }
-        reverseOrderPos = 0;
-
-        int currentBlock = 0;
-        while (reverseOrderPos < size) {
-            if (alonePos[currentBlock] == 0) {
-                for(int i=0, b=currentBlock + 1; i<blocks; i++, b++) {
-                    if (b > blocks) {
-                        b = 0;
-                    }
-                    if (alonePos[b] > 0) {
-                        currentBlock = b;
-                        break;
-                    }
-                }
-            }
-            if (alonePos[currentBlock] == 0) {
-                break;
-            }
-            int i = (b << BLOCK_SHIFT) + alone[--alonePos[currentBlock]];
-            if (t2vals[i].t2count == 0) {
-                continue;
-            }
-            long hash = t2vals[i].t2;
-            uint8_t found = -1;
-            for (int hi = 0; hi < 3; hi++) {
-                int h = getHashFromHash(hash, hi, blockLength);
-                int newCount =  --t2vals[h].t2count;
-                if (newCount == 0) {
-                    found = (uint8_t) hi;
-                } else {
-                    if (newCount == 1) {
-                        alone[alonePos++] = h;
-                    }
-                    t2vals[h].t2 ^= hash;
-                }
-            }
-            reverseOrder[reverseOrderPos] = hash;
-            reverseH[reverseOrderPos] = found;
-            reverseOrderPos++;
-        }
-        delete [] alone;
-*/
-
-
-
-
         if (reverseOrderPos == size) {
             break;
         }
@@ -389,7 +296,6 @@ Status XorFilter<ItemType, FingerprintType, HashFamily>::AddAll(
         hasher = new HashFamily();
 
     }
-
     for (int i = reverseOrderPos - 1; i >= 0; i--) {
         // the hash of the key we insert next
         uint64_t hash = reverseOrder[i];
