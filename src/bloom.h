@@ -95,14 +95,13 @@ Status BloomFilter<ItemType, bits_per_item, HashFamily, k>::Add(
     return Ok;
 }
 
-#define BLOCK_SHIFT 18
-#define BLOCK_LEN (1 << BLOCK_SHIFT)
+const int blockShift = 15;
+const int blockLen = 1 << blockShift;
 
-void applyBlock(uint64_t* tmp, int block, int len, uint64_t *data) {
-    for (int i = 0; i < len; i += 2) {
-        int index = tmp[(block << BLOCK_SHIFT) + i];
-        uint64_t bits = tmp[(block << BLOCK_SHIFT) + i + 1];
-        data[index] |= bits;
+void applyBlock(uint32_t* tmp, int block, int len, uint64_t *data) {
+    for (int i = 0; i < len; i++) {
+        uint32_t index = tmp[(block << blockShift) + i];
+        data[index >> 6] |= getBit(index);
     }
 }
 
@@ -110,26 +109,25 @@ template <typename ItemType, size_t bits_per_item,
     typename HashFamily, int k>
 Status BloomFilter<ItemType, bits_per_item, HashFamily, k>::AddAll(
     const vector<ItemType> keys, const size_t start, const size_t end) {
-    int blocks = 1 + arrayLength / BLOCK_LEN;
-    uint64_t* tmp = new uint64_t[blocks * BLOCK_LEN];
+    int blocks = 1 + arrayLength / blockLen;
+    uint32_t* tmp = new uint32_t[blocks * blockLen];
     int* tmpLen = new int[blocks]();
     for(size_t i = start; i < end; i++) {
         uint64_t key = keys[i];
         uint64_t hash = hasher(key);
         uint32_t a = (uint32_t) (hash >> 32);
-        uint32_t bb = (uint32_t) hash;
+        uint32_t b = (uint32_t) hash;
         for (int j = 0; j < k; j++) {
             int index = reduce(a, this->arrayLength);
-            int block = index >> BLOCK_SHIFT;
+            int block = index >> blockShift;
             int len = tmpLen[block];
-            tmp[(block << BLOCK_SHIFT) + len] = index;
-            tmp[(block << BLOCK_SHIFT) + len + 1] = getBit(a);
-            tmpLen[block] = len + 2;
-            if (len + 2 == BLOCK_LEN) {
-                applyBlock(tmp, block, len + 2, data);
+            tmp[(block << blockShift) + len] = (index << 6) + (a & 63);
+            tmpLen[block] = len + 1;
+            if (len + 1 == blockLen) {
+                applyBlock(tmp, block, len + 1, data);
                 tmpLen[block] = 0;
             }
-            a += bb;
+            a += b;
         }
     }
     for (int block = 0; block < blocks; block++) {
