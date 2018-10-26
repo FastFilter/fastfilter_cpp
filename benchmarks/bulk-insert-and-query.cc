@@ -22,6 +22,7 @@
 #include "cuckoofilter.h"
 #include "cuckoofilter_stable.h"
 #include "xorfilter.h"
+#include "xorfilter_10bit.h"
 #include "xorfilter_2.h"
 #include "xorfilter_2n.h"
 #include "xorfilter_plus.h"
@@ -246,6 +247,23 @@ struct FilterAPI<XorFilter<ItemType, FingerprintType, HashFamily>> {
 template <typename ItemType, typename FingerprintType, typename FingerprintStorageType, typename HashFamily>
 struct FilterAPI<XorFilter2<ItemType, FingerprintType, FingerprintStorageType, HashFamily>> {
   using Table = XorFilter2<ItemType, FingerprintType, FingerprintStorageType, HashFamily>;
+  static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
+  static void Add(uint64_t key, Table* table) {
+      throw std::runtime_error("Unsupported");
+  }
+  static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
+    table->AddAll(keys, start, end);
+  }
+
+  CONTAIN_ATTRIBUTES
+  static bool Contain(uint64_t key, const Table * table) {
+    return (0 == table->Contain(key));
+  }
+};
+
+template <typename ItemType, typename HashFamily>
+struct FilterAPI<XorFilter10<ItemType, HashFamily>> {
+  using Table = XorFilter10<ItemType, HashFamily>;
   static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
   static void Add(uint64_t key, Table* table) {
       throw std::runtime_error("Unsupported");
@@ -560,7 +578,7 @@ int main(int argc, char * argv[]) {
    {5,"Cuckoo16"}, {6,"CuckooSemiSort13" }, {7,"Bloom8"},
    {8,"Bloom12" }, {9,"Bloom16"}, {10,"BlockedBloom"},
    {11,"sort"}, {12,"Xor+8"}, {13,"Xor+16"},
-   {14,"GCS"}, {15,"CQF"},  {37,"Bloom8 (addall)"},
+   {14,"GCS"}, {15,"CQF"}, {25, "Xor10"}, {37,"Bloom8 (addall)"},
    {38,"Bloom12 (addall)"},{39,"Bloom16 (addall)"},
    {40,"BlockedBloom (addall)"}
   };
@@ -875,6 +893,13 @@ int main(int argc, char * argv[]) {
           XorFilter2<uint64_t, uint32_t, UInt10Array, SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
       cout << setw(NAME_WIDTH) << "Xor10.x" << cf << endl;
+  }
+
+  if (algorithmId == 25 || (algos.find(25) != algos.end())) {
+      auto cf = FilterBenchmark<
+          XorFilter10<uint64_t, SimpleMixSplit>>(
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
+      cout << setw(NAME_WIDTH) << "Xor10" << cf << endl;
   }
 
 
