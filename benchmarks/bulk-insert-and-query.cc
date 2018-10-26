@@ -57,7 +57,7 @@ using namespace gqfilter;
 #endif
 
 // The number of items sampled when determining the lookup performance
-const size_t SAMPLE_SIZE = 10 * 1000 * 1000;
+const size_t MAX_SAMPLE_SIZE = 10 * 1000 * 1000;
 
 // The statistics gathered for each table type:
 struct Statistics {
@@ -652,10 +652,12 @@ int main(int argc, char * argv[]) {
    {5,"Cuckoo16"}, {6,"CuckooSemiSort13" }, {7,"Bloom8"},
    {8,"Bloom12" }, {9,"Bloom16"}, {10,"BlockedBloom"},
    {11,"sort"}, {12,"Xor+8"}, {13,"Xor+16"},
-   {14,"GCS"}, {15,"CQF"}, {25, "Xor10"}, {37,"Bloom8 (addall)"},
+   {14,"GCS"}, {15,"CQF"}, {22, "Xor10 (NBitArray)"}, {23, "Xor14 (NBitArray)"}, 
+   {24, "Xor10.x"}, {25, "Xor10"},{26, "Xor10.666"}, {37,"Bloom8 (addall)"},
    {38,"Bloom12 (addall)"},{39,"Bloom16 (addall)"},
    {40,"BlockedBloom (addall)"}
   };
+
   if (argc < 2) {
     cout << "Usage: " << argv[0] << " <numberOfEntries> [<algorithmId> [<seed>]]" << endl;
     cout << " numberOfEntries: number of keys, we recommend at least 100000000" << endl;
@@ -699,12 +701,16 @@ int main(int argc, char * argv[]) {
           return 2;
       }
   }
+  size_t actual_sample_size = MAX_SAMPLE_SIZE;
+  if (actual_sample_size > add_count) {
+    actual_sample_size = add_count;
+  }
   vector<uint64_t> to_add = seed == -1 ?
-      GenerateRandom64Fast(add_count, rand()) :
-      GenerateRandom64Fast(add_count, seed);
+      GenerateRandom64Fast(actual_sample_size, rand()) :
+      GenerateRandom64Fast(actual_sample_size, seed);
   vector<uint64_t> to_lookup = seed == -1 ?
-      GenerateRandom64Fast(SAMPLE_SIZE, rand()) :
-      GenerateRandom64Fast(SAMPLE_SIZE, seed + add_count);
+      GenerateRandom64Fast(actual_sample_size, rand()) :
+      GenerateRandom64Fast(actual_sample_size, seed + add_count);
 
   if (seed >= 0 && seed < 64) {
     // 0-64 are special seeds
@@ -728,7 +734,7 @@ int main(int argc, char * argv[]) {
     }
   }
 
-  assert(to_lookup.size() == SAMPLE_SIZE);
+  assert(to_lookup.size() == actual_sample_size);
   size_t distinct_lookup;
   size_t distinct_add;
   std::cout << "checking match size... " << std::flush;
@@ -749,14 +755,11 @@ int main(int argc, char * argv[]) {
     cout << "WARNING: Filter contains "<< (to_add.size() - distinct_add) << " duplicates." << endl;
     hasduplicates = true;
   }
-  size_t actual_sample_size = SAMPLE_SIZE;
-  if (actual_sample_size > add_count) {
-    cout << "WARNING: Your set contains only " << add_count << ". We can't very well support a sample size of " <<   SAMPLE_SIZE << endl;
-    actual_sample_size = add_count;
-  }
+
 
   if (actual_sample_size > to_lookup.size()) {
-    throw out_of_range("to_lookup must contain at least SAMPLE_SIZE values");
+    std::cerr << "actual_sample_size = "<< actual_sample_size << std::endl;
+    throw out_of_range("to_lookup must contain at least actual_sample_size values");
   }
 
   std::vector<samples_t> mixed_sets;
@@ -952,42 +955,44 @@ int main(int argc, char * argv[]) {
       auto cf = FilterBenchmark<
           XorFilter2<uint64_t, uint16_t, NBitArray<uint16_t, 10>, SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
-      cout << setw(NAME_WIDTH) << "Xor10" << cf << endl;
+      cout << setw(NAME_WIDTH) << names[22] << cf << endl;
   }
+
 
   if (algorithmId == 23 || (algos.find(23) != algos.end())) {
       auto cf = FilterBenchmark<
           XorFilter2<uint64_t, uint16_t, NBitArray<uint16_t, 14>, SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
-      cout << setw(NAME_WIDTH) << "Xor14" << cf << endl;
+      cout << setw(NAME_WIDTH) << names[23] << cf << endl;
   }
+
 
   if (algorithmId == 24 || (algos.find(24) != algos.end())) {
       auto cf = FilterBenchmark<
           XorFilter2<uint64_t, uint32_t, UInt10Array, SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
-      cout << setw(NAME_WIDTH) << "Xor10.x" << cf << endl;
+      cout << setw(NAME_WIDTH) << names[24] << cf << endl;
   }
 
   if (algorithmId == 25 || (algos.find(25) != algos.end())) {
       auto cf = FilterBenchmark<
           XorFilter10<uint64_t, SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
-      cout << setw(NAME_WIDTH) << "Xor10" << cf << endl;
+      cout << setw(NAME_WIDTH) << names[25] << cf << endl;
   }
 
   if (algorithmId == 26 || (algos.find(26) != algos.end())) {
       auto cf = FilterBenchmark<
           XorFilter10_666<uint64_t, SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
-      cout << setw(NAME_WIDTH) << "Xor10.666" << cf << endl;
+      cout << setw(NAME_WIDTH) << names[26] << cf << endl;
   }
 
   if (algorithmId == 27 || (algos.find(27) != algos.end())) {
       auto cf = FilterBenchmark<
           XorFilter13<uint64_t, SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
-      cout << setw(NAME_WIDTH) << "Xor13" << cf << endl;
+      cout << setw(NAME_WIDTH) << names[27]  << cf << endl;
   }
 
   if (algorithmId == 37 || algorithmId < 0 || (algos.find(37) != algos.end())) {
