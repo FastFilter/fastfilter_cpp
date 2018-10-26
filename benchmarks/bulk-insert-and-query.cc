@@ -706,8 +706,8 @@ int main(int argc, char * argv[]) {
     actual_sample_size = add_count;
   }
   vector<uint64_t> to_add = seed == -1 ?
-      GenerateRandom64Fast(actual_sample_size, rand()) :
-      GenerateRandom64Fast(actual_sample_size, seed);
+      GenerateRandom64Fast(add_count, rand()) :
+      GenerateRandom64Fast(add_count, seed);
   vector<uint64_t> to_lookup = seed == -1 ?
       GenerateRandom64Fast(actual_sample_size, rand()) :
       GenerateRandom64Fast(actual_sample_size, seed + add_count);
