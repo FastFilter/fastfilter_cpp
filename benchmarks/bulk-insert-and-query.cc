@@ -23,6 +23,7 @@
 #include "cuckoofilter_stable.h"
 #include "xorfilter.h"
 #include "xorfilter_10bit.h"
+#include "xorfilter_13bit.h"
 #include "xorfilter_10_666bit.h"
 #include "xorfilter_2.h"
 #include "xorfilter_2n.h"
@@ -265,6 +266,23 @@ struct FilterAPI<XorFilter2<ItemType, FingerprintType, FingerprintStorageType, H
 template <typename ItemType, typename HashFamily>
 struct FilterAPI<XorFilter10<ItemType, HashFamily>> {
   using Table = XorFilter10<ItemType, HashFamily>;
+  static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
+  static void Add(uint64_t key, Table* table) {
+      throw std::runtime_error("Unsupported");
+  }
+  static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
+    table->AddAll(keys, start, end);
+  }
+
+  CONTAIN_ATTRIBUTES
+  static bool Contain(uint64_t key, const Table * table) {
+    return (0 == table->Contain(key));
+  }
+};
+
+template <typename ItemType, typename HashFamily>
+struct FilterAPI<XorFilter13<ItemType, HashFamily>> {
+  using Table = XorFilter13<ItemType, HashFamily>;
   static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
   static void Add(uint64_t key, Table* table) {
       throw std::runtime_error("Unsupported");
@@ -965,6 +983,12 @@ int main(int argc, char * argv[]) {
       cout << setw(NAME_WIDTH) << "Xor10.666" << cf << endl;
   }
 
+  if (algorithmId == 27 || (algos.find(27) != algos.end())) {
+      auto cf = FilterBenchmark<
+          XorFilter13<uint64_t, SimpleMixSplit>>(
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
+      cout << setw(NAME_WIDTH) << "Xor13" << cf << endl;
+  }
 
   if (algorithmId == 37 || algorithmId < 0 || (algos.find(37) != algos.end())) {
       auto cf = FilterBenchmark<
