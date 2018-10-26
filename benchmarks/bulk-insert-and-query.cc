@@ -23,6 +23,7 @@
 #include "cuckoofilter_stable.h"
 #include "xorfilter.h"
 #include "xorfilter_10bit.h"
+#include "xorfilter_10_666bit.h"
 #include "xorfilter_2.h"
 #include "xorfilter_2n.h"
 #include "xorfilter_plus.h"
@@ -264,6 +265,23 @@ struct FilterAPI<XorFilter2<ItemType, FingerprintType, FingerprintStorageType, H
 template <typename ItemType, typename HashFamily>
 struct FilterAPI<XorFilter10<ItemType, HashFamily>> {
   using Table = XorFilter10<ItemType, HashFamily>;
+  static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
+  static void Add(uint64_t key, Table* table) {
+      throw std::runtime_error("Unsupported");
+  }
+  static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
+    table->AddAll(keys, start, end);
+  }
+
+  CONTAIN_ATTRIBUTES
+  static bool Contain(uint64_t key, const Table * table) {
+    return (0 == table->Contain(key));
+  }
+};
+
+template <typename ItemType, typename HashFamily>
+struct FilterAPI<XorFilter10_666<ItemType, HashFamily>> {
+  using Table = XorFilter10_666<ItemType, HashFamily>;
   static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
   static void Add(uint64_t key, Table* table) {
       throw std::runtime_error("Unsupported");
@@ -571,6 +589,44 @@ void parse_comma_separated(char * c, std::set<int> & answer ) {
             ss.ignore();
     }
 }
+
+/*
+#define MUL 1625L
+#define MUL2 (MUL*MUL)
+// (1<<64) / MUL
+#define INVMUL 11351842506898185L
+// (1<<64) / MUL2
+#define INVMUL2 6985749235014L
+int main() {
+    printf("start\n");
+    for (int a = 0; a < MUL; a++) {
+        for (int b = 0; b < MUL; b++) {
+            for (int c = 0; c < MUL; c++) {
+                uint32_t x = a * MUL2 + b * MUL + c;
+                int aa = (int) (((__uint128_t) x * (INVMUL2 + 1)) >> 64);
+                if (aa != a) {
+                    printf("wrong a");
+                    return -1;
+                }
+                int bb = (int) (((__uint128_t) x * (INVMUL + 1)) >> 64);
+                int rb = bb % MUL;
+                if (rb != b) {
+                    printf("wrong b");
+                    return -1;
+                }
+                int expected = (a + b + c) % MUL;
+                int got = (aa + bb + x) % MUL;
+                if (expected != got) {
+                    printf("wrong modulo");
+                    return -1;
+                }
+            }
+        }
+    }
+    printf("end\n");
+    return 0;
+}
+*/
 
 int main(int argc, char * argv[]) {
   std::map<int,std::string> names = {{0,"Xor8"},{1,"Xor12"},
@@ -900,6 +956,13 @@ int main(int argc, char * argv[]) {
           XorFilter10<uint64_t, SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
       cout << setw(NAME_WIDTH) << "Xor10" << cf << endl;
+  }
+
+  if (algorithmId == 26 || (algos.find(26) != algos.end())) {
+      auto cf = FilterBenchmark<
+          XorFilter10_666<uint64_t, SimpleMixSplit>>(
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
+      cout << setw(NAME_WIDTH) << "Xor10.666" << cf << endl;
   }
 
 
