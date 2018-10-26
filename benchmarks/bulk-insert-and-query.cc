@@ -509,9 +509,13 @@ Statistics FilterBenchmark(
 
 #ifdef __linux__
     unified.end(results);
-    printf("cycles: %10.zu (%10.3f per key) instructions: %10.zu (%10.3f per key, %10.3f per cycle) cache misses: %10.zu (%10.3f per key) branch misses: %10.zu (%10.3f per key)\n",
-      (size_t)results[0], results[0]*1.0/add_count, (size_t)results[1], results[1]*1.0/add_count , results[1]*1.0/results[0], (size_t)results[2], results[2]*1.0/add_count,
-      (size_t)results[3], results[3] * 1.0/add_count);
+    printf("adds    ");
+    printf("cycles: %4.1f/key, instructions: (%4.1f/key, %4.1f/cycle) cache misses: %4.2f/key branch misses: %4.2f/key\n",
+      results[0]*1.0/add_count, 
+      results[1]*1.0/add_count , 
+      results[1]*1.0/results[0],  
+      results[2]*1.0/add_count,
+       results[3] * 1.0/add_count);
 #else
    std::cout << "." << std::flush;
 #endif
@@ -539,9 +543,13 @@ Statistics FilterBenchmark(
     const auto lookup_time = NowNanos() - start_time;
 #ifdef __linux__
     unified.end(results);
-    printf("cycles: %10.zu (%10.3f per key) instructions: %10.zu (%10.3f per key, %10.3f per cycle) cache misses: %10.zu (%10.3f per key) branch misses: %10.zu (%10.3f per key)\n",
-      (size_t)results[0], results[0]*1.0/to_lookup_mixed.size(), (size_t)results[1], results[1]*1.0/to_lookup_mixed.size() , results[1]*1.0/results[0], (size_t)results[2], results[2]*1.0/to_lookup_mixed.size(),
-      (size_t)results[3], results[3] * 1.0/to_lookup_mixed.size());
+    printf("%3.2f%%  ",found_probability);
+    printf("cycles: %4.1f/key, instructions: (%4.1f/key, %4.1f/cycle) cache misses: %4.2f/key branch misses: %4.1f/key\n",
+      results[0]*1.0/to_lookup_mixed.size(), 
+      results[1]*1.0/to_lookup_mixed.size(), 
+      results[1]*1.0/results[0],  
+      results[2]*1.0/to_lookup_mixed.size(),
+      results[3] * 1.0/to_lookup_mixed.size());
 #else
    std::cout << "." << std::flush;
 #endif
@@ -653,7 +661,7 @@ int main(int argc, char * argv[]) {
    {8,"Bloom12" }, {9,"Bloom16"}, {10,"BlockedBloom"},
    {11,"sort"}, {12,"Xor+8"}, {13,"Xor+16"},
    {14,"GCS"}, {15,"CQF"}, {22, "Xor10 (NBitArray)"}, {23, "Xor14 (NBitArray)"}, 
-   {24, "Xor10.x"}, {25, "Xor10"},{26, "Xor10.666"}, {37,"Bloom8 (addall)"},
+   {25, "Xor10"},{26, "Xor10.666"}, {37,"Bloom8 (addall)"},
    {38,"Bloom12 (addall)"},{39,"Bloom16 (addall)"},
    {40,"BlockedBloom (addall)"}
   };
@@ -661,11 +669,12 @@ int main(int argc, char * argv[]) {
   if (argc < 2) {
     cout << "Usage: " << argv[0] << " <numberOfEntries> [<algorithmId> [<seed>]]" << endl;
     cout << " numberOfEntries: number of keys, we recommend at least 100000000" << endl;
-    cout << " algorithmId: -1 for all (default), or 0..n to only run this algorithm" << endl;
+    cout << " algorithmId: -1 for all default algos, or 0..n to only run this algorithm" << endl;
     cout << " algorithmId: can also be a comma-separated list of non-negative integers" << endl;
     for(auto i : names) {
         cout << "           "<< i.first << " : " << i.second << endl;
     }
+    cout << " algorithmId: can also be set to the string 'all' if you want to run them all, including some that are excluded by default" << endl;
     cout << " seed: seed for the PRNG; -1 for random seed (default)" << endl;
     return 1;
   }
@@ -676,14 +685,19 @@ int main(int argc, char * argv[]) {
     cerr << "Invalid number: " << argv[1];
     return 2;
   }
-  int algorithmId = -1;
+  int algorithmId = -1; // -1 is just the default
   std::set<int> algos;
   if (argc > 2) {
-      if(strstr(argv[2],",") != NULL) {
+      if(strcmp(argv[2],"all") == 0) {
+         for(auto i : names) {// we add all the named algos.
+           algos.insert(i.first);
+         }
+      } else if(strstr(argv[2],",") != NULL) {
         // we have a list of algos
         algorithmId = 9999999; // disabling
         parse_comma_separated(argv[2], algos);
       } else {
+        // we select just one
         stringstream input_string_2(argv[2]);
         input_string_2 >> algorithmId;
         if (input_string_2.fail()) {
@@ -966,13 +980,13 @@ int main(int argc, char * argv[]) {
       cout << setw(NAME_WIDTH) << names[23] << cf << endl;
   }
 
-
-  if (algorithmId == 24 || (algos.find(24) != algos.end())) {
+  // this algo overflows and crashes
+  /*if (algorithmId == 24 || (algos.find(24) != algos.end())) {
       auto cf = FilterBenchmark<
           XorFilter2<uint64_t, uint32_t, UInt10Array, SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
       cout << setw(NAME_WIDTH) << names[24] << cf << endl;
-  }
+  }*/
 
   if (algorithmId == 25 || (algos.find(25) != algos.end())) {
       auto cf = FilterBenchmark<
