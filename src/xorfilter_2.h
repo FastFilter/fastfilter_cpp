@@ -104,16 +104,32 @@ struct t2val {
 
 typedef struct t2val t2val_t;
 
-#define BLOCK_SHIFT 18
-#define BLOCK_LEN (1 << BLOCK_SHIFT)
+const int blockShift = 18;
 
 void applyBlock(uint64_t* tmp, int b, int len, t2val_t * t2vals) {
     for (int i = 0; i < len; i += 2) {
-        uint64_t x = tmp[(b << BLOCK_SHIFT) + i];
-        int index = (int) tmp[(b << BLOCK_SHIFT) + i + 1];
+        uint64_t x = tmp[(b << blockShift) + i];
+        int index = (int) tmp[(b << blockShift) + i + 1];
         t2vals[index].t2count++;
         t2vals[index].t2 ^= x;
     }
+}
+
+int applyBlock2(uint64_t* tmp, int b, int len, t2val_t * t2vals, int* alone, int alonePos) {
+    for (int i = 0; i < len; i += 2) {
+        uint64_t hash = tmp[(b << blockShift) + i];
+        int index = (int) tmp[(b << blockShift) + i + 1];
+        int oldCount = t2vals[index].t2count;
+        if (oldCount >= 1) {
+            int newCount = oldCount - 1;
+            t2vals[index].t2count = newCount;
+            if (newCount == 1) {
+                alone[alonePos++] = index;
+            }
+            t2vals[index].t2 ^= hash;
+        }
+    }
+    return alonePos;
 }
 
 template <typename ItemType, typename FingerprintType,
@@ -128,20 +144,20 @@ Status XorFilter2<ItemType, FingerprintType, FingerprintStorageType, HashFamily>
     t2val_t * t2vals = new t2val_t[m];
     while (true) {
         memset(t2vals, 0, sizeof(t2val_t[m]));
-        int blocks = 1 + (3 * blockLength) / BLOCK_LEN;
-        uint64_t* tmp = new uint64_t[blocks * BLOCK_LEN];
+        int blocks = 1 + ((3 * blockLength) >> blockShift);
+        uint64_t* tmp = new uint64_t[blocks << blockShift];
         int* tmpc = new int[blocks]();
         for(size_t i = start; i < end; i++) {
             uint64_t k = keys[i];
             uint64_t hash = (*hasher)(k);
             for (int hi = 0; hi < 3; hi++) {
                 int index = getHashFromHash(hash, hi, blockLength);
-                int b = index >> BLOCK_SHIFT;
+                int b = index >> blockShift;
                 int i2 = tmpc[b];
-                tmp[(b << BLOCK_SHIFT) + i2] = hash;
-                tmp[(b << BLOCK_SHIFT) + i2 + 1] = index;
+                tmp[(b << blockShift) + i2] = hash;
+                tmp[(b << blockShift) + i2 + 1] = index;
                 tmpc[b] += 2;
-                if (i2 + 2 == BLOCK_LEN) {
+                if (i2 + 2 == (1 << blockShift)) {
                     applyBlock(tmp, b, i2 + 2, t2vals);
                     tmpc[b] = 0;
                 }
@@ -153,8 +169,94 @@ Status XorFilter2<ItemType, FingerprintType, FingerprintStorageType, HashFamily>
         }
         delete[] tmp;
         delete[] tmpc;
-
         reverseOrderPos = 0;
+
+        int* alone = new int[arrayLength];
+        int alonePos = 0;
+        for (size_t i = 0; i < arrayLength; i++) {
+            if (t2vals[i].t2count == 1) {
+                alone[alonePos++] = i;
+            }
+        }
+        tmp = new uint64_t[blocks << blockShift];
+        tmpc = new int[blocks]();
+        reverseOrderPos = 0;
+        int bestBlock = -1;
+        while (reverseOrderPos < size) {
+            if (alonePos == 0) {
+                // we need to apply blocks until we have an entry that is alone
+                // (that is, until alonePos > 0)
+                // so, find a large block (the larger the better)
+                // but don't need to search very long
+                // start searching where we stopped the last time
+                // (to make it more even)
+                for (int i = 0, b = bestBlock + 1, best = -1; i < blocks; i++) {
+                    if (b >= blocks) {
+                        b = 0;
+                    }
+                    if (tmpc[b] > best) {
+                        best = tmpc[b];
+                        bestBlock = b;
+                        if (best > (1 << (blockShift - 1))) {
+                            // sufficiently large: stop
+                            break;
+                        }
+                    }
+                }
+                if (tmpc[bestBlock] > 0) {
+                    alonePos = applyBlock2(tmp, bestBlock, tmpc[bestBlock], t2vals, alone, alonePos);
+                    tmpc[bestBlock] = 0;
+                }
+                // applying a block may not actually result in a new entry that is alone
+                if (alonePos == 0) {
+                    for (int b = 0; b < blocks && alonePos == 0; b++) {
+                        if (tmpc[b] > 0) {
+                            alonePos = applyBlock2(tmp, b, tmpc[b], t2vals, alone, alonePos);
+                            tmpc[b] = 0;
+                        }
+                    }
+                }
+            }
+            if (alonePos == 0) {
+                break;
+            }
+            int i = alone[--alonePos];
+            int b = i >> blockShift;
+            if (tmpc[b] > 0) {
+                alonePos = applyBlock2(tmp, b, tmpc[b], t2vals, alone, alonePos);
+                tmpc[b] = 0;
+            }
+            uint8_t found = -1;
+            if (t2vals[i].t2count == 0) {
+                continue;
+            }
+            long hash = t2vals[i].t2;
+            for (int hi = 0; hi < 3; hi++) {
+                int h = getHashFromHash(hash, hi, blockLength);
+                if (h == i) {
+                    found = (uint8_t) hi;
+                    t2vals[i].t2count = 0;
+                } else {
+                    int b = h >> blockShift;
+                    int i2 = tmpc[b];
+                    tmp[(b << blockShift) + i2] = hash;
+                    tmp[(b << blockShift) + i2 + 1] = h;
+                    tmpc[b] += 2;
+                    if (tmpc[b] >= 1 << blockShift) {
+                        alonePos = applyBlock2(tmp, b, tmpc[b], t2vals, alone, alonePos);
+                        tmpc[b] = 0;
+                    }
+                }
+            }
+            reverseOrder[reverseOrderPos] = hash;
+            reverseH[reverseOrderPos] = found;
+            reverseOrderPos++;
+        }
+        delete[] tmp;
+        delete[] tmpc;
+        delete[] alone;
+
+/*
         int* alone = new int[arrayLength];
         int alonePos = 0;
         reverseOrderPos = 0;
@@ -190,6 +292,9 @@ Status XorFilter2<ItemType, FingerprintType, FingerprintStorageType, HashFamily>
             }
         }
         delete [] alone;
+
+*/
+
         if (reverseOrderPos == size) {
             break;
         }
