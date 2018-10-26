@@ -65,10 +65,12 @@ int getFinger(uint32_t x, int i) {
         return x;
     }
     if (i == 1) {
+//        return (double) x / fingerMul;
 //        return x >> 10;
         return (int) (((__uint128_t) x * (invFingerMul + 1)) >> 64);
     }
     if (i == 2) {
+//        return (double) x / fingerMul2;
 //        return x >> 20;
         return (int) (((__uint128_t) x * (invFingerMul2 + 1)) >> 64);
     }
@@ -296,9 +298,13 @@ Status XorFilter10_666<ItemType, HashFamily>::Contain(
     uint32_t h1 = reduce(r1, blockLength);
     uint32_t h2 = reduce(r2, blockLength);
     f += fingerprints[h0];
+    // f += fingerprints[h1] / fingerMul;
     f += (((__uint128_t) fingerprints[h1] * (invFingerMul + 1)) >> 64);
     f += (((__uint128_t) fingerprints[h2] * (invFingerMul2 + 1)) >> 64);
-    return (f % fingerMul) == 0 ? Ok : NotFound;
+    f -= (((__uint128_t) f * (invFingerMul + 1)) >> 64) * fingerMul;
+    return (f == 0) ? Ok : NotFound;
+    // http://www.icodeguru.com/Embedded/Hacker's-Delight/078.htm
+    // return (((__uint128_t) f * (invFingerMul + 1)) >> 64) == f * 2996886421821121001L ? Ok : NotFound;
 }
 
 }  // namespace xorfilter
