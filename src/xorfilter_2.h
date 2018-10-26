@@ -34,21 +34,8 @@ inline uint32_t reduce(uint32_t hash, uint32_t n) {
 }
 
 size_t getHashFromHash(uint64_t hash, int index, int blockLength) {
-    uint32_t r;
-    switch(index) {
-    case 0:
-        r = (uint32_t) (hash);
-        break;
-    case 1:
-        r = (uint32_t) rotl64(hash, 21);
-        break;
-    default:
-        r = (uint32_t) rotl64(hash, 42);
-        break;
-    }
-    r = reduce(r, blockLength);
-    r = r + index * blockLength;
-    return (size_t) r;
+    uint32_t r = rotl64(hash, index * 21);
+    return (size_t) reduce(r, blockLength) + index * blockLength;
 }
 
 template <typename ItemType, typename FingerprintType,
@@ -64,7 +51,7 @@ class XorFilter2 {
   HashFamily* hasher;
 
   inline FingerprintType fingerprint(const uint64_t hash) const {
-    return (FingerprintType) fingerprints->mask(hash);
+    return (FingerprintType) hash ^ (hash >> 32);
   }
 
  public:
@@ -331,10 +318,10 @@ Status XorFilter2<ItemType, FingerprintType, FingerprintStorageType, HashFamily>
             } else {
                 // this is different from BDZ: using xor to calculate the
                 // fingerprint
-                xor2 ^= fingerprints->mask(fp[h]);
+                xor2 ^= fp[h];
             }
         }
-        fp[change] = xor2;
+        fp[change] = fingerprints->mask(xor2);
     }
     fingerprints->bulkSet(fp, arrayLength);
 
@@ -351,7 +338,7 @@ template <typename ItemType, typename FingerprintType,
 Status XorFilter2<ItemType, FingerprintType, FingerprintStorageType, HashFamily>::Contain(
     const ItemType &key) const {
     uint64_t hash = (*hasher)(key);
-    FingerprintType f = hash;
+    FingerprintType f = fingerprint(hash);
     uint32_t r0 = (uint32_t) hash;
     uint32_t r1 = (uint32_t) rotl64(hash, 21);
     uint32_t r2 = (uint32_t) rotl64(hash, 42);
@@ -359,7 +346,7 @@ Status XorFilter2<ItemType, FingerprintType, FingerprintStorageType, HashFamily>
     uint32_t h1 = reduce(r1, blockLength) + blockLength;
     uint32_t h2 = reduce(r2, blockLength) + 2 * blockLength;
     f ^= fingerprints->get(h0) ^ fingerprints->get(h1) ^ fingerprints->get(h2);
-    return fingerprint(f) == 0 ? Ok : NotFound;
+    return fingerprints->mask(f) == 0 ? Ok : NotFound;
 }
 
 template <typename ItemType, typename FingerprintType,
