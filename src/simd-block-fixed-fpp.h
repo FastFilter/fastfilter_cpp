@@ -184,3 +184,101 @@ SimdBlockFilterFixed<HashFamily>::Find(const uint64_t key) const noexcept {
   return _mm256_testc_si256(bucket, mask);
 }
 
+/// 64-byte version
+
+struct mask64bytes {
+    __m256i first;
+    __m256i second;
+};
+
+typedef struct mask64bytes mask64bytes_t;
+
+template<typename HashFamily = ::hashing::TwoIndependentMultiplyShift>
+class SimdBlockFilterFixed64 {
+ private:
+  // The filter is divided up into Buckets:
+  using Bucket = mask64bytes_t;
+
+  const int bucketCount;
+
+  Bucket* directory_;
+
+  HashFamily hasher_;
+
+ public:
+  // Consumes at most (1 << log_heap_space) bytes on the heap:
+  explicit SimdBlockFilterFixed64(const int bits);
+  ~SimdBlockFilterFixed64() noexcept;
+  void Add(const uint64_t key) noexcept;
+
+  bool Find(const uint64_t key) const noexcept;
+  uint64_t SizeInBytes() const { return sizeof(Bucket) * bucketCount; }
+
+ private:
+  static mask64bytes_t MakeMask(const uint64_t hash) noexcept;
+
+
+};
+
+template<typename HashFamily>
+SimdBlockFilterFixed64<HashFamily>::SimdBlockFilterFixed64(const int bits)
+
+  : bucketCount(::std::max(1, bits / 50)),
+    directory_(nullptr),
+    hasher_() {
+  if (!__builtin_cpu_supports("avx2")) {
+    throw ::std::runtime_error("SimdBlockFilterFixed64 does not work without AVX2 instructions");
+  }
+  const size_t alloc_size = bucketCount * sizeof(Bucket);
+  const int malloc_failed =
+      posix_memalign(reinterpret_cast<void**>(&directory_), 64, alloc_size);
+  if (malloc_failed) throw ::std::bad_alloc();
+  memset(directory_, 0, alloc_size);
+}
+
+template<typename HashFamily>
+SimdBlockFilterFixed64<HashFamily>::~SimdBlockFilterFixed64() noexcept {
+  free(directory_);
+  directory_ = nullptr;
+}
+
+
+
+template <typename HashFamily>
+[[gnu::always_inline]] inline mask64bytes_t
+SimdBlockFilterFixed64<HashFamily>::MakeMask(const uint64_t hash) noexcept {
+  const __m256i ones = _mm256_set1_epi64x(1);
+  const __m256i rehash1 = _mm256_setr_epi32(0x47b6137bU, 0x44974d91U, 0x8824ad5bU,
+      0xa2b7289dU, 0x705495c7U, 0x2df1424bU, 0x9efc4947U, 0x5c6bfb31U);
+  mask64bytes_t answer;
+  __m256i hash_data = _mm256_set1_epi64x(hash);
+  __m256i h = _mm256_mullo_epi32(rehash1, hash_data);
+  h = _mm256_srli_epi32(h, 26);
+  answer.first = _mm256_and_si256(_mm256_set1_epi64x(0x3f),h);
+  answer.first = _mm256_sllv_epi64(ones, answer.first);
+  answer.second = _mm256_srli_epi64(h,32);
+  answer.second = _mm256_sllv_epi64(ones, answer.second);
+  return answer;
+}
+
+template <typename HashFamily>
+[[gnu::always_inline]] inline void
+SimdBlockFilterFixed64<HashFamily>::Add(const uint64_t key) noexcept {
+  const auto hash = hasher_(key);
+  const uint32_t bucket_idx = reduce(rotl64(hash, 32), bucketCount);
+  mask64bytes_t mask = MakeMask(key);
+  mask64bytes_t* const bucket = &reinterpret_cast<mask64bytes_t*>(directory_)[bucket_idx];
+  bucket->first = _mm256_or_si256(mask.first, bucket->first);
+  bucket->second= _mm256_or_si256(mask.second, bucket->second);
+  assert(Find(key));
+}
+
+template <typename HashFamily>
+[[gnu::always_inline]] inline bool
+SimdBlockFilterFixed64<HashFamily>::Find(const uint64_t key) const noexcept {
+  const auto hash = hasher_(key);
+  const uint32_t bucket_idx = reduce(rotl64(hash, 32), bucketCount);
+  const mask64bytes_t mask = MakeMask(key);
+  const mask64bytes_t  bucket = reinterpret_cast<mask64bytes_t*>(directory_)[bucket_idx];
+  return _mm256_testc_si256(bucket.first, mask.first) & _mm256_testc_si256(bucket.second, mask.second);
+}

@@ -243,45 +243,6 @@ Status XorFilter2<ItemType, FingerprintType, FingerprintStorageType, HashFamily>
         delete[] tmpc;
         delete[] alone;
 
-/*
-        int* alone = new int[arrayLength];
-        int alonePos = 0;
-        reverseOrderPos = 0;
-        for(size_t nextAloneCheck = 0; nextAloneCheck < arrayLength;) {
-            while (nextAloneCheck < arrayLength) {
-                if (t2vals[nextAloneCheck].t2count == 1) {
-                    alone[alonePos++] = nextAloneCheck;
-                }
-                nextAloneCheck++;
-            }
-            while (alonePos > 0) {
-                int i = alone[--alonePos];
-                if (t2vals[i].t2count == 0) {
-                    continue;
-                }
-                long hash = t2vals[i].t2;
-                uint8_t found = -1;
-                for (int hi = 0; hi < 3; hi++) {
-                    int h = getHashFromHash(hash, hi, blockLength);
-                    int newCount =  -- t2vals[h].t2count;
-                    if (newCount == 0) {
-                        found = (uint8_t) hi;
-                    } else {
-                        if (newCount == 1) {
-                            alone[alonePos++] = h;
-                        }
-                        t2vals[h].t2 ^= hash;
-                    }
-                }
-                reverseOrder[reverseOrderPos] = hash;
-                reverseH[reverseOrderPos] = found;
-                reverseOrderPos++;
-            }
-        }
-        delete [] alone;
-
-*/
-
         if (reverseOrderPos == size) {
             break;
         }
