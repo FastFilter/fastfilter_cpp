@@ -266,7 +266,7 @@ template <typename HashFamily>
 SimdBlockFilterFixed64<HashFamily>::Add(const uint64_t key) noexcept {
   const auto hash = hasher_(key);
   const uint32_t bucket_idx = reduce(rotl64(hash, 32), bucketCount);
-  mask64bytes_t mask = MakeMask(key);
+  mask64bytes_t mask = MakeMask(hash);
   mask64bytes_t* const bucket = &reinterpret_cast<mask64bytes_t*>(directory_)[bucket_idx];
   bucket->first = _mm256_or_si256(mask.first, bucket->first);
   bucket->second= _mm256_or_si256(mask.second, bucket->second);
@@ -278,7 +278,7 @@ template <typename HashFamily>
 SimdBlockFilterFixed64<HashFamily>::Find(const uint64_t key) const noexcept {
   const auto hash = hasher_(key);
   const uint32_t bucket_idx = reduce(rotl64(hash, 32), bucketCount);
-  const mask64bytes_t mask = MakeMask(key);
+  const mask64bytes_t mask = MakeMask(hash);
   const mask64bytes_t  bucket = reinterpret_cast<mask64bytes_t*>(directory_)[bucket_idx];
   return _mm256_testc_si256(bucket.first, mask.first) & _mm256_testc_si256(bucket.second, mask.second);
 }
