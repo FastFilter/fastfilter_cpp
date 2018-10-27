@@ -242,42 +242,6 @@ Status XorFilter<ItemType, FingerprintType, HashFamily>::AddAll(
         delete[] tmpc;
         delete[] alone;
 
-/*
-
-        int* alone = new int[arrayLength];
-        int alonePos = 0;
-        for (size_t i = 0; i < arrayLength; i++) {
-            if (t2vals[i].t2count == 1) {
-                alone[alonePos++] = i;
-            }
-        }
-        reverseOrderPos = 0;
-        while (alonePos > 0 && reverseOrderPos < size) {
-            int i = alone[--alonePos];
-            if (t2vals[i].t2count == 0) {
-                continue;
-            }
-            long hash = t2vals[i].t2;
-            uint8_t found = -1;
-            for (int hi = 0; hi < 3; hi++) {
-                int h = getHashFromHash(hash, hi, blockLength);
-                int newCount =  --t2vals[h].t2count;
-                if (newCount == 0) {
-                    found = (uint8_t) hi;
-                } else {
-                    if (newCount == 1) {
-                        alone[alonePos++] = h;
-                    }
-                    t2vals[h].t2 ^= hash;
-                }
-            }
-            reverseOrder[reverseOrderPos] = hash;
-            reverseH[reverseOrderPos] = found;
-            reverseOrderPos++;
-        }
-        delete [] alone;
-*/
-
         if (reverseOrderPos == size) {
             break;
         }
