@@ -251,12 +251,12 @@ SimdBlockFilterFixed64<HashFamily>::MakeMask(const uint64_t hash) noexcept {
   const __m256i rehash1 = _mm256_setr_epi32(0x47b6137bU, 0x44974d91U, 0x8824ad5bU,
       0xa2b7289dU, 0x705495c7U, 0x2df1424bU, 0x9efc4947U, 0x5c6bfb31U);
   mask64bytes_t answer;
-  __m256i hash_data = _mm256_set1_epi64x(hash);
+  __m256i hash_data = _mm256_set1_epi32(hash);
   __m256i h = _mm256_mullo_epi32(rehash1, hash_data);
   h = _mm256_srli_epi32(h, 26);
-  answer.first = _mm256_and_si256(_mm256_set1_epi64x(0x3f),h);
+  answer.first = _mm256_unpackhi_epi32(h,_mm256_setzero_si256());
   answer.first = _mm256_sllv_epi64(ones, answer.first);
-  answer.second = _mm256_srli_epi64(h,32);
+  answer.second = _mm256_unpacklo_epi32(h,_mm256_setzero_si256());
   answer.second = _mm256_sllv_epi64(ones, answer.second);
   return answer;
 }
