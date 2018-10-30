@@ -18,7 +18,6 @@
 #include <algorithm>
 #include <new>
 
-#include <x86intrin.h>
 
 #include "hashutil.h"
 
@@ -40,6 +39,7 @@ inline uint64_t rotl64(uint64_t n, unsigned int c) {
 }
 
 #ifdef __AVX2__
+#include <x86intrin.h>
 
 template<typename HashFamily = ::hashing::TwoIndependentMultiplyShift>
 class SimdBlockFilterFixed {
@@ -293,7 +293,7 @@ SimdBlockFilterFixed64<HashFamily>::Find(const uint64_t key) const noexcept {
 // 32-bit version ARM
 //////////////////
 #ifdef __aarch64__
-
+#include <arm_neon.h>
 struct mask32bytes {
     uint32x4_t first;
     uint32x4_t second;
@@ -366,19 +366,16 @@ template <typename HashFamily>
 [[gnu::always_inline]] inline mask32bytes_t
 SimdBlockFilterFixed<HashFamily>::MakeMask(const uint32_t hash) noexcept {
   const uint32x4_t ones = {1,1,1,1};
-  // Odd contants for hashing:
   const uint32x4_t rehash1 = {0x47b6137bU, 0x44974d91U, 0x8824ad5bU,
       0xa2b7289dU};
   const uint32x4_t rehash2 = {0x705495c7U, 0x2df1424bU, 0x9efc4947U, 0x5c6bfb31U};
   uint32x4_t hash_data = {hash,hash,hash,hash};
-  // Multiply-shift hashing ala Dietzfelbinger et al.: multiply 'hash' by eight different
-  // odd constants, then keep the 5 most significant bits from each product.
   uint32x4_t part1 = vmulq_u32(hash_data,rehash1);
   uint32x4_t part2 = vmulq_u32(hash_data,rehash2);
   part1 = vshrq_n_u32(part1, 27);
   part2 = vshrq_n_u32(part2, 27);
-  vshlq_u32(ones, part1);
-  vshlq_u32(ones, part2);
+  part1 = vshlq_u32(ones, vreinterpretq_s32_u32(part1));
+  part2 = vshlq_u32(ones, vreinterpretq_s32_u32(part2));
   mask32bytes_t answer;
   answer.first = part1;
   answer.second = part2;
@@ -448,13 +445,13 @@ SimdBlockFilterFixed<HashFamily>::Find(const uint64_t key) const noexcept {
   const uint32_t bucket_idx = reduce(rotl64(hash, 32), bucketCount);
   const mask32bytes_t mask = MakeMask(hash);
   const mask32bytes_t bucket = directory_[bucket_idx];
-  uint32x4_t an1 = vbicq_u32(bucket.first,mask.first);
-  uint32x4_t an2 = vbicq_u32(bucket.second,mask.second);
+  uint32x4_t an1 = vbicq_u32(mask.first, bucket.first);
+  uint32x4_t an2 = vbicq_u32(mask.second,bucket.second);
   uint32x4_t an = vorrq_u32(an1, an2);
   uint64x2_t v64 = vreinterpretq_u64_u32(an);
   uint32x2_t v32 = vqmovn_u64(v64);
   uint64x1_t result = vreinterpret_u64_u32(v32);
-  return vget_lane_u64(result, 0);
+  return vget_lane_u64(result, 0) == 0;
 }
 
 
