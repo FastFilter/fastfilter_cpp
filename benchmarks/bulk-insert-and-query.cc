@@ -212,6 +212,26 @@ struct FilterAPI<SimdBlockFilterFixed64<HashFamily>> {
 
 
 template <typename HashFamily>
+struct FilterAPI<SimdBlockFilterFixed16<HashFamily>> {
+  using Table = SimdBlockFilterFixed16<HashFamily>;
+  static Table ConstructFromAddCount(size_t add_count) {
+    Table ans(ceil(add_count * 8.0 / CHAR_BIT));
+    return ans;
+  }
+  static void Add(uint64_t key, Table* table) {
+    table->Add(key);
+  }
+  static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
+     throw std::runtime_error("Unsupported");
+  }
+
+  CONTAIN_ATTRIBUTES
+  static bool Contain(uint64_t key, const Table * table) {
+    return table->Find(key);
+  }
+};
+
+template <typename HashFamily>
 struct FilterAPI<SimdBlockFilterFixed<HashFamily>> {
   using Table = SimdBlockFilterFixed<HashFamily>;
   static Table ConstructFromAddCount(size_t add_count) {
@@ -683,7 +703,7 @@ int main(int argc, char * argv[]) {
    {14,"GCS"}, {15,"CQF"}, {22, "Xor10 (NBitArray)"}, {23, "Xor14 (NBitArray)"}, 
    {25, "Xor10"},{26, "Xor10.666"}, {37,"Bloom8 (addall)"},
    {38,"Bloom12 (addall)"},{39,"Bloom16 (addall)"},
-   {40,"BlockedBloom (addall)"}, {64,"BlockedBloom64"}
+   {40,"BlockedBloom (addall)"}, {63,"BlockedBloom16"}, {64,"BlockedBloom64"}
   };
 
   if (argc < 2) {
@@ -904,6 +924,15 @@ int main(int argc, char * argv[]) {
       auto cf = FilterBenchmark<SimdBlockFilterFixed64<SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed);
       cout << setw(NAME_WIDTH) << names[64] << cf << endl;
+  }
+
+#endif
+#ifdef __SSSE3__
+
+  if (algorithmId == 63 || algorithmId < 0 || (algos.find(63) != algos.end())) {
+      auto cf = FilterBenchmark<SimdBlockFilterFixed16<SimpleMixSplit>>(
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed);
+      cout << setw(NAME_WIDTH) << names[63] << cf << endl;
   }
 #endif
 
