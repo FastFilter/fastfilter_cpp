@@ -30,7 +30,7 @@ inline uint32_t reduce(uint32_t hash, uint32_t n) {
     return (uint32_t) (((uint64_t) hash * n) >> 32);
 }
 
-inline uint64_t rotl64(uint64_t n, unsigned int c) {
+static inline uint64_t rotl64(uint64_t n, unsigned int c) {
     // assumes width is a power of 2
     const unsigned int mask = (CHAR_BIT * sizeof(n) - 1);
     // assert ( (c<=mask) &&"rotate by type width or more");
