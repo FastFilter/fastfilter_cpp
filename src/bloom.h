@@ -172,5 +172,98 @@ std::string BloomFilter<ItemType, bits_per_item, HashFamily, k>::Info() const {
   }
   return ss.str();
 }
+
+
+
+
+/***************
+ * Simple block filter (naive implementation)
+ ***************/
+
+template<size_t blocksize, int k, typename HashFamily = ::hashing::TwoIndependentMultiplyShift>
+class SimpleBlockFilter {
+ private:
+  // The filter is divided up into Buckets:
+  using Bucket = uint64_t[blocksize];
+
+  const int bucketCount;
+
+  Bucket* directory_;
+
+  HashFamily hasher_;
+
+ public:
+  // Consumes at most (1 << log_heap_space) bytes on the heap:
+  explicit SimpleBlockFilter(const int bits);
+  ~SimpleBlockFilter() noexcept;
+  void Add(const uint64_t key) noexcept;
+
+  bool Find(const uint64_t key) const noexcept;
+  uint64_t SizeInBytes() const { return sizeof(Bucket) * bucketCount; }
+
+
+};
+
+template<size_t blocksize,int k,  typename HashFamily>
+SimpleBlockFilter<blocksize,k,HashFamily>::SimpleBlockFilter(const int capacity)
+  : bucketCount(capacity * k / (  blocksize * 64)),
+    directory_(nullptr),
+    hasher_() {
+  const size_t alloc_size = bucketCount * sizeof(Bucket);
+  const int malloc_failed =
+      posix_memalign(reinterpret_cast<void**>(&directory_), 64, alloc_size);
+  if (malloc_failed) throw ::std::bad_alloc();
+  memset(directory_, 0, alloc_size);
+}
+
+template<size_t blocksize, int k, typename HashFamily>
+SimpleBlockFilter<blocksize,k,HashFamily>::~SimpleBlockFilter() noexcept {
+  free(directory_);
+  directory_ = nullptr;
+}
+
+static inline uint64_t rotl64(uint64_t n, unsigned int c) {
+    // assumes width is a power of 2
+    const unsigned int mask = (CHAR_BIT * sizeof(n) - 1);
+    // assert ( (c<=mask) &&"rotate by type width or more");
+    c &= mask;
+    return (n << c) | ( n >> ((-c) & mask));
+}
+
+template<size_t blocksize,int k,  typename HashFamily>
+inline void
+SimpleBlockFilter<blocksize,k, HashFamily>::Add(const uint64_t key) noexcept {
+  const auto hash = hasher_(key);
+  const uint32_t bucket_idx = reduce(rotl64(hash, 32), bucketCount);
+  Bucket * bucket = directory_ + bucket_idx;
+  uint32_t a = (uint32_t) (hash >> 32);
+  uint32_t b = (uint32_t) hash;
+  for (int i = 0; i < k; i++) {
+        ((uint64_t *)bucket)[reduce(a, blocksize)] |= getBit(a);
+        a += b;
+  }
+
+}
+
+
+template<size_t blocksize, int k, typename HashFamily>
+inline bool
+SimpleBlockFilter<blocksize,k,HashFamily>::Find(const uint64_t key) const noexcept {
+  const auto hash = hasher_(key);
+  const uint32_t bucket_idx = reduce(rotl64(hash, 32), bucketCount);
+  const Bucket * bucket = directory_ + bucket_idx;
+  uint32_t a = (uint32_t) (hash >> 32);
+  uint32_t b = (uint32_t) hash;
+  for (int i = 0; i < k; i++) {
+        if ((((const uint64_t *)bucket)[reduce(a, blocksize)] & getBit(a)) == 0) {
+            return false;
+        }
+        a += b;
+  }
+  return true;
+}
+
+
+
 }  // namespace bloomfilter
 #endif  // BLOOM_FILTER_BLOOM_FILTER_H_

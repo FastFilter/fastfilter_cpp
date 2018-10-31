@@ -32,12 +32,10 @@
 #include "gcs.h"
 #ifdef __AVX2__
 #include "gqf_cpp.h"
+#include "simd-block.h"
 #endif
 #include "random.h"
-#ifdef __AVX2__
-#include "simd-block.h"
 #include "simd-block-fixed-fpp.h"
-#endif
 #include "timing.h"
 #ifdef __linux__
 #include "linux-perf-events.h"
@@ -169,6 +167,30 @@ struct FilterAPI<CuckooFilterStable<ItemType, bits_per_item, TableType, HashFami
   }
 };
 
+
+#ifdef __aarch64__
+template <typename HashFamily>
+struct FilterAPI<SimdBlockFilterFixed<HashFamily>> {
+  using Table = SimdBlockFilterFixed<HashFamily>;
+  static Table ConstructFromAddCount(size_t add_count) {
+    Table ans(ceil(add_count * 8.0 / CHAR_BIT));
+    return ans;
+  }
+  static void Add(uint64_t key, Table* table) {
+    table->Add(key);
+  }
+  static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
+    table->AddAll(keys, start, end);
+  }
+
+  CONTAIN_ATTRIBUTES
+  static bool Contain(uint64_t key, const Table * table) {
+    return table->Find(key);
+  }
+};
+
+#endif
+
 #ifdef __AVX2__
 template <typename HashFamily>
 struct FilterAPI<SimdBlockFilter<HashFamily>> {
@@ -212,6 +234,26 @@ struct FilterAPI<SimdBlockFilterFixed64<HashFamily>> {
 
 
 template <typename HashFamily>
+struct FilterAPI<SimdBlockFilterFixed16<HashFamily>> {
+  using Table = SimdBlockFilterFixed16<HashFamily>;
+  static Table ConstructFromAddCount(size_t add_count) {
+    Table ans(ceil(add_count * 8.0 / CHAR_BIT));
+    return ans;
+  }
+  static void Add(uint64_t key, Table* table) {
+    table->Add(key);
+  }
+  static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
+     throw std::runtime_error("Unsupported");
+  }
+
+  CONTAIN_ATTRIBUTES
+  static bool Contain(uint64_t key, const Table * table) {
+    return table->Find(key);
+  }
+};
+
+template <typename HashFamily>
 struct FilterAPI<SimdBlockFilterFixed<HashFamily>> {
   using Table = SimdBlockFilterFixed<HashFamily>;
   static Table ConstructFromAddCount(size_t add_count) {
@@ -248,6 +290,28 @@ struct FilterAPI<XorFilter<ItemType, FingerprintType>> {
     return (0 == table->Contain(key));
   }
 };
+
+
+template<size_t blocksize, int k, typename HashFamily>
+struct FilterAPI<SimpleBlockFilter<blocksize,k,HashFamily>> {
+  using Table = SimpleBlockFilter<blocksize,k,HashFamily>;
+  static Table ConstructFromAddCount(size_t add_count) {
+    Table ans(ceil(add_count * 8.0 / CHAR_BIT));
+    return ans;
+  }
+  static void Add(uint64_t key, Table* table) {
+    table->Add(key);
+  }
+  static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
+    throw std::runtime_error("Unsupported");
+  }
+
+  CONTAIN_ATTRIBUTES
+  static bool Contain(uint64_t key, const Table * table) {
+    return table->Find(key);
+  }
+};
+
 
 template <typename ItemType, typename FingerprintType, typename HashFamily>
 struct FilterAPI<XorFilter<ItemType, FingerprintType, HashFamily>> {
@@ -636,45 +700,21 @@ void parse_comma_separated(char * c, std::set<int> & answer ) {
     }
 }
 
-/*
-#define MUL 1625L
-#define MUL2 (MUL*MUL)
-// (1<<64) / MUL
-#define INVMUL 11351842506898185L
-// (1<<64) / MUL2
-#define INVMUL2 6985749235014L
-int main() {
-    printf("start\n");
-    for (int a = 0; a < MUL; a++) {
-        for (int b = 0; b < MUL; b++) {
-            for (int c = 0; c < MUL; c++) {
-                uint32_t x = a * MUL2 + b * MUL + c;
-                int aa = (int) (((__uint128_t) x * (INVMUL2 + 1)) >> 64);
-                if (aa != a) {
-                    printf("wrong a");
-                    return -1;
-                }
-                int bb = (int) (((__uint128_t) x * (INVMUL + 1)) >> 64);
-                int rb = bb % MUL;
-                if (rb != b) {
-                    printf("wrong b");
-                    return -1;
-                }
-                int expected = (a + b + c) % MUL;
-                int got = (aa + bb + x) % MUL;
-                if (expected != got) {
-                    printf("wrong modulo");
-                    return -1;
-                }
-            }
-        }
-    }
-    printf("end\n");
-    return 0;
-}
-*/
 
 int main(int argc, char * argv[]) {
+#ifdef __aarch64__
+  std::map<int,std::string> names = {{0,"Xor8"},{1,"Xor12"},
+   {2,"Xor16"}, {3,"Cuckoo8"}, {4,"Cuckoo12"},
+   {5,"Cuckoo16"}, {6,"CuckooSemiSort13" }, {7,"Bloom8"},
+   {8,"Bloom12" }, {9,"Bloom16"}, {10,"BlockedBloom"},
+   {11,"sort"}, {12,"Xor+8"}, {13,"Xor+16"},
+   {14,"GCS"},  {22, "Xor10 (NBitArray)"}, {23, "Xor14 (NBitArray)"},
+   {25, "Xor10"},{26, "Xor10.666"}, {37,"Bloom8 (addall)"},
+   {38,"Bloom12 (addall)"},
+   {40,"BlockedBloom (addall)"},
+   {70,"SimpleBlockedBloom"}
+  };
+#elif defined( __AVX2__)
   std::map<int,std::string> names = {{0,"Xor8"},{1,"Xor12"},
    {2,"Xor16"}, {3,"Cuckoo8"}, {4,"Cuckoo12"},
    {5,"Cuckoo16"}, {6,"CuckooSemiSort13" }, {7,"Bloom8"},
@@ -683,8 +723,22 @@ int main(int argc, char * argv[]) {
    {14,"GCS"}, {15,"CQF"}, {22, "Xor10 (NBitArray)"}, {23, "Xor14 (NBitArray)"}, 
    {25, "Xor10"},{26, "Xor10.666"}, {37,"Bloom8 (addall)"},
    {38,"Bloom12 (addall)"},{39,"Bloom16 (addall)"},
-   {40,"BlockedBloom (addall)"}, {64,"BlockedBloom64"}
+   {40,"BlockedBloom (addall)"}, {63,"BlockedBloom16"}, {64,"BlockedBloom64"},
+   {70,"SimpleBlockedBloom"}
   };
+#else
+  std::map<int,std::string> names = {{0,"Xor8"},{1,"Xor12"},
+   {2,"Xor16"}, {3,"Cuckoo8"}, {4,"Cuckoo12"},
+   {5,"Cuckoo16"}, {6,"CuckooSemiSort13" }, {7,"Bloom8"},
+   {8,"Bloom12" }, {9,"Bloom16"}, 
+   {11,"sort"}, {12,"Xor+8"}, {13,"Xor+16"},
+   {14,"GCS"}, {22, "Xor10 (NBitArray)"}, {23, "Xor14 (NBitArray)"},
+   {25, "Xor10"},{26, "Xor10.666"}, {37,"Bloom8 (addall)"},
+   {38,"Bloom12 (addall)"},{39,"Bloom16 (addall)"},
+   {70,"SimpleBlockedBloom"}
+  };
+#endif
+
 
   if (argc < 2) {
     cout << "Usage: " << argv[0] << " <numberOfEntries> [<algorithmId> [<seed>]]" << endl;
@@ -716,6 +770,10 @@ int main(int argc, char * argv[]) {
         // we have a list of algos
         algorithmId = 9999999; // disabling
         parse_comma_separated(argv[2], algos);
+        if(algos.size() == 0) {
+           cerr<< " no algo selected " << endl;
+           return -3;
+        }
       } else {
         // we select just one
         stringstream input_string_2(argv[2]);
@@ -894,6 +952,14 @@ int main(int argc, char * argv[]) {
       cout << setw(NAME_WIDTH) << names[9] << cf << endl;
   }
 
+#ifdef __aarch64__
+  if (algorithmId == 10 || algorithmId < 0 || (algos.find(10) != algos.end())) {
+      auto cf = FilterBenchmark<SimdBlockFilterFixed<>>(
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed);
+      cout << setw(NAME_WIDTH) << names[10] << cf << endl;
+  }
+#endif 
+
 #ifdef __AVX2__
   if (algorithmId == 10 || algorithmId < 0 || (algos.find(10) != algos.end())) {
       auto cf = FilterBenchmark<SimdBlockFilterFixed<>>(
@@ -904,6 +970,15 @@ int main(int argc, char * argv[]) {
       auto cf = FilterBenchmark<SimdBlockFilterFixed64<SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed);
       cout << setw(NAME_WIDTH) << names[64] << cf << endl;
+  }
+
+#endif
+#ifdef __SSSE3__
+
+  if (algorithmId == 63 || algorithmId < 0 || (algos.find(63) != algos.end())) {
+      auto cf = FilterBenchmark<SimdBlockFilterFixed16<SimpleMixSplit>>(
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed);
+      cout << setw(NAME_WIDTH) << names[63] << cf << endl;
   }
 #endif
 
@@ -1004,6 +1079,13 @@ int main(int argc, char * argv[]) {
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
       cout << setw(NAME_WIDTH) << names[23] << cf << endl;
   }
+  if (algorithmId == 70 || (algos.find(70) != algos.end())) {
+      auto cf = FilterBenchmark<
+          SimpleBlockFilter<8, 8, SimpleMixSplit>>(
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, false);
+      cout << setw(NAME_WIDTH) << names[70] << cf << endl;
+  }
+
 
   // this algo overflows and crashes
   /*if (algorithmId == 24 || (algos.find(24) != algos.end())) {
@@ -1062,8 +1144,13 @@ int main(int argc, char * argv[]) {
       cout << setw(NAME_WIDTH) << names[40] << cf << endl;
   }
 #endif
-
-
+#ifdef __aarch64__
+  if (algorithmId == 40 || algorithmId < 0 || (algos.find(40) != algos.end())) {
+      auto cf = FilterBenchmark<SimdBlockFilterFixed<SimpleMixSplit>>(
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
+      cout << setw(NAME_WIDTH) << names[40] << cf << endl;
+  }
+#endif
 
 // broken algorithms (don't always find all key)
 /*
