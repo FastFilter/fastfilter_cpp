@@ -468,9 +468,9 @@ struct FilterAPI<GQFilter<ItemType, bits_per_item, HashFamily>> {
 };
 #endif
 
-template <typename ItemType, size_t bits_per_item, typename HashFamily>
-struct FilterAPI<BloomFilter<ItemType, bits_per_item, HashFamily>> {
-  using Table = BloomFilter<ItemType, bits_per_item, HashFamily>;
+template <typename ItemType, size_t bits_per_item, bool branchless, typename HashFamily>
+struct FilterAPI<BloomFilter<ItemType, bits_per_item, branchless, HashFamily>> {
+  using Table = BloomFilter<ItemType, bits_per_item, branchless, HashFamily>;
   static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
   static void Add(uint64_t key, Table* table) {
     table->Add(key);
@@ -710,7 +710,8 @@ int main(int argc, char * argv[]) {
    {11,"sort"}, {12,"Xor+8"}, {13,"Xor+16"},
    {14,"GCS"},  {22, "Xor10 (NBitArray)"}, {23, "Xor14 (NBitArray)"},
    {25, "Xor10"},{26, "Xor10.666"}, {37,"Bloom8 (addall)"},
-   {38,"Bloom12 (addall)"},
+   {38,"Bloom12 (addall)"}, {43,"Branchless Bloom8 (addall)"},
+   {41,"Branchless Bloom12 (addall)"},{42,"Branchless Bloom16 (addall)"},
    {40,"BlockedBloom (addall)"},
    {70,"SimpleBlockedBloom"}
   };
@@ -722,7 +723,8 @@ int main(int argc, char * argv[]) {
    {11,"sort"}, {12,"Xor+8"}, {13,"Xor+16"},
    {14,"GCS"}, {15,"CQF"}, {22, "Xor10 (NBitArray)"}, {23, "Xor14 (NBitArray)"}, 
    {25, "Xor10"},{26, "Xor10.666"}, {37,"Bloom8 (addall)"},
-   {38,"Bloom12 (addall)"},{39,"Bloom16 (addall)"},
+   {38,"Bloom12 (addall)"},{39,"Bloom16 (addall)"}, {43,"Branchless Bloom8 (addall)"},
+   {41,"Branchless Bloom12 (addall)"},{42,"Branchless Bloom16 (addall)"},
    {40,"BlockedBloom (addall)"}, {63,"BlockedBloom16"}, {64,"BlockedBloom64"},
    {70,"SimpleBlockedBloom"}
   };
@@ -734,7 +736,8 @@ int main(int argc, char * argv[]) {
    {11,"sort"}, {12,"Xor+8"}, {13,"Xor+16"},
    {14,"GCS"}, {22, "Xor10 (NBitArray)"}, {23, "Xor14 (NBitArray)"},
    {25, "Xor10"},{26, "Xor10.666"}, {37,"Bloom8 (addall)"},
-   {38,"Bloom12 (addall)"},{39,"Bloom16 (addall)"},
+   {38,"Bloom12 (addall)"},{39,"Bloom16 (addall)"}, {43,"Branchless Bloom8 (addall)"},
+   {41,"Branchless Bloom12 (addall)"},{42,"Branchless Bloom16 (addall)"},
    {70,"SimpleBlockedBloom"}
   };
 #endif
@@ -933,21 +936,21 @@ int main(int argc, char * argv[]) {
 
   if (algorithmId == 7 || algorithmId < 0 || (algos.find(7) != algos.end())) {
       auto cf = FilterBenchmark<
-          BloomFilter<uint64_t, 8, SimpleMixSplit>>(
+          BloomFilter<uint64_t, 8, false, SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed);
       cout << setw(NAME_WIDTH) << names[7] << cf << endl;
   }
 
   if (algorithmId == 8 || algorithmId < 0 || (algos.find(8) != algos.end())) {
       auto cf = FilterBenchmark<
-          BloomFilter<uint64_t, 12, SimpleMixSplit>>(
+          BloomFilter<uint64_t, 12, false, SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed);
       cout << setw(NAME_WIDTH) << names[8]<< cf << endl;
   }
 
   if (algorithmId == 9 || algorithmId < 0 || (algos.find(9) != algos.end())) {
       auto cf = FilterBenchmark<
-          BloomFilter<uint64_t, 16, SimpleMixSplit>>(
+          BloomFilter<uint64_t, 16, false, SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed);
       cout << setw(NAME_WIDTH) << names[9] << cf << endl;
   }
@@ -1079,7 +1082,7 @@ int main(int argc, char * argv[]) {
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
       cout << setw(NAME_WIDTH) << names[23] << cf << endl;
   }
-  if (algorithmId == 70 || (algos.find(70) != algos.end())) {
+  if (algorithmId == 70 || algorithmId < 0 || (algos.find(70) != algos.end())) {
       auto cf = FilterBenchmark<
           SimpleBlockFilter<8, 8, SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, false);
@@ -1118,25 +1121,47 @@ int main(int argc, char * argv[]) {
 
   if (algorithmId == 37 || algorithmId < 0 || (algos.find(37) != algos.end())) {
       auto cf = FilterBenchmark<
-          BloomFilter<uint64_t, 8, SimpleMixSplit>>(
+          BloomFilter<uint64_t, 8, false, SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
       cout << setw(NAME_WIDTH) << names[37] << cf << endl;
   }
 
   if (algorithmId == 38 || algorithmId < 0 || (algos.find(38) != algos.end())) {
       auto cf = FilterBenchmark<
-          BloomFilter<uint64_t, 12, SimpleMixSplit>>(
+          BloomFilter<uint64_t, 12, false, SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
       cout << setw(NAME_WIDTH) << names[38] << cf << endl;
   }
 
   if (algorithmId == 39 || algorithmId < 0 || (algos.find(39) != algos.end())) {
       auto cf = FilterBenchmark<
-          BloomFilter<uint64_t, 16, SimpleMixSplit>>(
+          BloomFilter<uint64_t, 16, false, SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
       cout << setw(NAME_WIDTH) << names[39] << cf << endl;
   }
 
+
+
+  if (algorithmId == 43 || algorithmId < 0 || (algos.find(43) != algos.end())) {
+      auto cf = FilterBenchmark<
+          BloomFilter<uint64_t, 8, false, SimpleMixSplit>>(
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
+      cout << setw(NAME_WIDTH) << names[43] << cf << endl;
+  }
+
+  if (algorithmId == 41 || algorithmId < 0 || (algos.find(41) != algos.end())) {
+      auto cf = FilterBenchmark<
+          BloomFilter<uint64_t, 12, false, SimpleMixSplit>>(
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
+      cout << setw(NAME_WIDTH) << names[41] << cf << endl;
+  }
+
+  if (algorithmId == 42 || algorithmId < 0 || (algos.find(42) != algos.end())) {
+      auto cf = FilterBenchmark<
+          BloomFilter<uint64_t, 16, false, SimpleMixSplit>>(
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
+      cout << setw(NAME_WIDTH) << names[42] << cf << endl;
+  }
 #ifdef __AVX2__
   if (algorithmId == 40 || algorithmId < 0 || (algos.find(40) != algos.end())) {
       auto cf = FilterBenchmark<SimdBlockFilterFixed<SimpleMixSplit>>(
