@@ -593,11 +593,11 @@ Statistics FilterBenchmark(
 
 #ifdef __linux__
     unified.end(results);
-    printf("adds    ");
-    printf("cycles: %4.1f/key, instructions: (%4.1f/key, %4.1f/cycle) cache misses: %4.2f/key branch misses: %4.2f/key\n",
-      results[0]*1.0/add_count, 
-      results[1]*1.0/add_count , 
-      results[1]*1.0/results[0],  
+    printf("adds   ");
+    printf("cycles: %5.1f/key, instructions: (%5.1f/key, %4.2f/cycle) cache misses: %5.2f/key branch misses: %4.2f/key\n",
+      results[0]*1.0/add_count,
+      results[1]*1.0/add_count ,
+      results[1]*1.0/results[0],
       results[2]*1.0/add_count,
        results[3] * 1.0/add_count);
 #else
@@ -628,10 +628,10 @@ Statistics FilterBenchmark(
 #ifdef __linux__
     unified.end(results);
     printf("%3.2f%%  ",found_probability);
-    printf("cycles: %4.1f/key, instructions: (%4.1f/key, %4.1f/cycle) cache misses: %4.2f/key branch misses: %4.1f/key\n",
-      results[0]*1.0/to_lookup_mixed.size(), 
-      results[1]*1.0/to_lookup_mixed.size(), 
-      results[1]*1.0/results[0],  
+    printf("cycles: %5.1f/key, instructions: (%5.1f/key, %4.2f/cycle) cache misses: %5.2f/key branch misses: %4.2f/key\n",
+      results[0]*1.0/to_lookup_mixed.size(),
+      results[1]*1.0/to_lookup_mixed.size(),
+      results[1]*1.0/results[0],
       results[2]*1.0/to_lookup_mixed.size(),
       results[3] * 1.0/to_lookup_mixed.size());
 #else
@@ -721,7 +721,7 @@ int main(int argc, char * argv[]) {
    {5,"Cuckoo16"}, {6,"CuckooSemiSort13" }, {7,"Bloom8"},
    {8,"Bloom12" }, {9,"Bloom16"}, {10,"BlockedBloom"},
    {11,"sort"}, {12,"Xor+8"}, {13,"Xor+16"},
-   {14,"GCS"}, {15,"CQF"}, {22, "Xor10 (NBitArray)"}, {23, "Xor14 (NBitArray)"}, 
+   {14,"GCS"}, {15,"CQF"}, {22, "Xor10 (NBitArray)"}, {23, "Xor14 (NBitArray)"},
    {25, "Xor10"},{26, "Xor10.666"}, {37,"Bloom8 (addall)"},
    {38,"Bloom12 (addall)"},{39,"Bloom16 (addall)"}, {43,"Branchless Bloom8 (addall)"},
    {41,"Branchless Bloom12 (addall)"},{42,"Branchless Bloom16 (addall)"},
@@ -732,7 +732,7 @@ int main(int argc, char * argv[]) {
   std::map<int,std::string> names = {{0,"Xor8"},{1,"Xor12"},
    {2,"Xor16"}, {3,"Cuckoo8"}, {4,"Cuckoo12"},
    {5,"Cuckoo16"}, {6,"CuckooSemiSort13" }, {7,"Bloom8"},
-   {8,"Bloom12" }, {9,"Bloom16"}, 
+   {8,"Bloom12" }, {9,"Bloom16"},
    {11,"sort"}, {12,"Xor+8"}, {13,"Xor+16"},
    {14,"GCS"}, {22, "Xor10 (NBitArray)"}, {23, "Xor14 (NBitArray)"},
    {25, "Xor10"},{26, "Xor10.666"}, {37,"Bloom8 (addall)"},
@@ -961,7 +961,7 @@ int main(int argc, char * argv[]) {
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed);
       cout << setw(NAME_WIDTH) << names[10] << cf << endl;
   }
-#endif 
+#endif
 
 #ifdef __AVX2__
   if (algorithmId == 10 || algorithmId < 0 || (algos.find(10) != algos.end())) {
@@ -1144,21 +1144,21 @@ int main(int argc, char * argv[]) {
 
   if (algorithmId == 43 || algorithmId < 0 || (algos.find(43) != algos.end())) {
       auto cf = FilterBenchmark<
-          BloomFilter<uint64_t, 8, false, SimpleMixSplit>>(
+          BloomFilter<uint64_t, 8, true, SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
       cout << setw(NAME_WIDTH) << names[43] << cf << endl;
   }
 
   if (algorithmId == 41 || algorithmId < 0 || (algos.find(41) != algos.end())) {
       auto cf = FilterBenchmark<
-          BloomFilter<uint64_t, 12, false, SimpleMixSplit>>(
+          BloomFilter<uint64_t, 12, true, SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
       cout << setw(NAME_WIDTH) << names[41] << cf << endl;
   }
 
   if (algorithmId == 42 || algorithmId < 0 || (algos.find(42) != algos.end())) {
       auto cf = FilterBenchmark<
-          BloomFilter<uint64_t, 16, false, SimpleMixSplit>>(
+          BloomFilter<uint64_t, 16, true, SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
       cout << setw(NAME_WIDTH) << names[42] << cf << endl;
   }

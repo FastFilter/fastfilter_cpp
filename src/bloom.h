@@ -148,11 +148,21 @@ Status BloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::Contain(
   uint32_t a = (uint32_t)(hash >> 32);
   uint32_t b = (uint32_t)hash;
   if (branchless) {
-    char ok = 1;
-    for (int i = 0; i < k; i++) {
-      ok &= bittest64(data + reduce(a, this->arrayLength), a);
+    int b0 = data[reduce(a, this->arrayLength)] >> (a & 63);
+    a += b;
+    int b1 = data[reduce(a, this->arrayLength)] >> (a & 63);
+    a += b;
+    int b2 = data[reduce(a, this->arrayLength)] >> (a & 63);
+    if ((b0 & b1 & b2 & 1) == 0) {
+        return NotFound;
     }
-    return ok == 0 ? Ok : NotFound;
+    for (int i = 3; i < k; i++) {
+      a += b;
+      if (((data[reduce(a, this->arrayLength)] >> (a & 63)) & 1) == 0) {
+          return NotFound;
+      }
+    }
+    return Ok;
   }
   for (int i = 0; i < k; i++) {
     if ((data[reduce(a, this->arrayLength)] & getBit(a)) == 0) {
