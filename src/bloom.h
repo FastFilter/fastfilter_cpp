@@ -147,7 +147,7 @@ Status BloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::Contain(
   uint64_t hash = hasher(key);
   uint32_t a = (uint32_t)(hash >> 32);
   uint32_t b = (uint32_t)hash;
-  if (branchless) {
+  if (branchless && k >= 3) {
     int b0 = data[reduce(a, this->arrayLength)] >> (a & 63);
     a += b;
     int b1 = data[reduce(a, this->arrayLength)] >> (a & 63);
