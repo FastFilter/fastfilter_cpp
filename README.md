@@ -1,5 +1,5 @@
-# xorfilter_cpp
-Xor Filters: Faster and Smaller Than Bloom and Cuckoo Filters (C++)
+# fastfilter_cpp
+Fast Filter: Fast approximate membership filter implementations (C++)
 
 ## Prerequisites
 
@@ -19,8 +19,11 @@ make
 
 ## Where is your code?
 
-See src/xorfilter.h. This single header depends on src/hashutil.h.
+The filter implementations are in `src`, most are single header files and depend on `src/hashutil.h`:
+
+* src/bloom.h
+* src/xorfilter.h
 
 ## Credit
 
-The code is derived from https://github.com/efficient/cuckoofilter by Bin Fan et al.
+The cuckoo filter and the benchmark are derived from https://github.com/efficient/cuckoofilter by Bin Fan et al.
