@@ -8,7 +8,11 @@ UNAME_P := $(shell uname -p)
 ifeq ($(UNAME_P),aarch64)
         CXXFLAGS += 
 else
+ifeq ($(UNAME_P),unknown)
+        CXXFLAGS += 
+else
 	CXXFLAGS += -march=native
+endif
 endif
 
 LDFLAGS = -Wall 
