@@ -290,23 +290,16 @@ SimdBlockFilterFixed64<HashFamily>::Find(const uint64_t key) const noexcept {
 #endif //__AVX2__
 
 ///////////////////
-// 32-bit version ARM
+// 16-byte version ARM
 //////////////////
 #ifdef __aarch64__
 #include <arm_neon.h>
-struct mask32bytes {
-    uint32x4_t first;
-    uint32x4_t second;
-};
-
-typedef struct mask32bytes mask32bytes_t;
-
 
 template<typename HashFamily = ::hashing::TwoIndependentMultiplyShift>
 class SimdBlockFilterFixed {
  private:
   // The filter is divided up into Buckets:
-  using Bucket = mask32bytes_t;
+  using Bucket = uint16x8_t;
 
   const int bucketCount;
 
@@ -337,14 +330,7 @@ class SimdBlockFilterFixed {
 
 template<typename HashFamily>
 SimdBlockFilterFixed<HashFamily>::SimdBlockFilterFixed(const int bits)
-    // bits / 16: fpp 0.1777%, 75.1%
-    // bits / 20: fpp 0.4384%, 63.4%
-    // bits / 22: fpp 0.6692%, 61.1%
-    // bits / 24: fpp 0.9765%, 59.7% <<== seems to be best (1% fpp seems important)
-    // bits / 26: fpp 1.3769%, 59.3%
-    // bits / 28: fpp 1.9197%, 60.3%
-    // bits / 32: fpp 3.3280%, 63.0%
-  : bucketCount(::std::max(1, bits / 24)),
+  : bucketCount(::std::max(1, bits / 10)),
     directory_(nullptr),
     hasher_() {
   const size_t alloc_size = bucketCount * sizeof(Bucket);
@@ -363,22 +349,16 @@ SimdBlockFilterFixed<HashFamily>::~SimdBlockFilterFixed() noexcept {
 // The SIMD reinterpret_casts technically violate C++'s strict aliasing rules. However, we
 // compile with -fno-strict-aliasing.
 template <typename HashFamily>
-[[gnu::always_inline]] inline mask32bytes_t
+[[gnu::always_inline]] inline uint16x8_t
 SimdBlockFilterFixed<HashFamily>::MakeMask(const uint32_t hash) noexcept {
-  const uint32x4_t ones = {1,1,1,1};
-  const uint32x4_t rehash1 = {0x47b6137bU, 0x44974d91U, 0x8824ad5bU,
-      0xa2b7289dU};
+  const uint16x8_t ones = {1,1,1,1,1,1,1,1};
+  const uint16x8_t rehash = {0x79d8, 0xe722, 0xf2fb, 0x21ec, 0x121b, 0x2302, 0x705a, 0x6e87}
+
   const uint32x4_t rehash2 = {0x705495c7U, 0x2df1424bU, 0x9efc4947U, 0x5c6bfb31U};
-  uint32x4_t hash_data = {hash,hash,hash,hash};
-  uint32x4_t part1 = vmulq_u32(hash_data,rehash1);
-  uint32x4_t part2 = vmulq_u32(hash_data,rehash2);
-  part1 = vshrq_n_u32(part1, 27);
-  part2 = vshrq_n_u32(part2, 27);
-  part1 = vshlq_u32(ones, vreinterpretq_s32_u32(part1));
-  part2 = vshlq_u32(ones, vreinterpretq_s32_u32(part2));
-  mask32bytes_t answer;
-  answer.first = part1;
-  answer.second = part2;
+  uint16x8_t hash_data = {hash,hash,hash,hash,hash,hash,hash,hash};
+  uint16x8_t answer = vmulq_u16(hash_data,rehash);
+  answer = vshrq_n_u16(answer, 12);
+  answer = vshlq_u16(ones, vreinterpretq_s16_u16(answer));
   return answer;
 }
 
@@ -387,55 +367,9 @@ template <typename HashFamily>
 SimdBlockFilterFixed<HashFamily>::Add(const uint64_t key) noexcept {
   const auto hash = hasher_(key);
   const uint32_t bucket_idx = reduce(rotl64(hash, 32), bucketCount);
-  const mask32bytes_t mask = MakeMask(hash);
-  mask32bytes_t bucket = directory_[bucket_idx];
-  bucket.first = vorrq_u32(mask.first, bucket.first);
-  bucket.second = vorrq_u32(mask.second, bucket.second);
-  directory_[bucket_idx] = bucket;
-}
-
-const int blockShift = 14;
-const int blockLen = 1 << blockShift;
-
-template<typename HashFamily>
-void SimdBlockFilterFixed<HashFamily>::ApplyBlock(uint64_t* tmp, int block, int len) {
-    for (int i = 0; i < len; i += 2) {
-        uint64_t hash = tmp[(block << blockShift) + i];
-        uint32_t bucket_idx = tmp[(block << blockShift) + i + 1];
-        const mask32bytes_t mask = MakeMask(hash);
-
-        mask32bytes_t bucket = directory_[bucket_idx];
-        bucket.first = vorrq_u32(mask.first, bucket.first);
-        bucket.second = vorrq_u32(mask.second, bucket.second);
-        directory_[bucket_idx] = bucket;
-    }
-}
-
-template<typename HashFamily>
-void SimdBlockFilterFixed<HashFamily>::AddAll(
-    const vector<uint64_t> keys, const size_t start, const size_t end) {
-    int blocks = 1 + bucketCount / blockLen;
-    uint64_t* tmp = new uint64_t[blocks * blockLen];
-    int* tmpLen = new int[blocks]();
-    for(size_t i = start; i < end; i++) {
-        uint64_t key = keys[i];
-        uint64_t hash = hasher_(key);
-        uint32_t bucket_idx = reduce(rotl64(hash, 32), bucketCount);
-        int block = bucket_idx >> blockShift;
-        int len = tmpLen[block];
-        tmp[(block << blockShift) + len] = hash;
-        tmp[(block << blockShift) + len + 1] = bucket_idx;
-        tmpLen[block] = len + 2;
-        if (len + 2 == blockLen) {
-            ApplyBlock(tmp, block, len + 1);
-            tmpLen[block] = 0;
-        }
-    }
-    for (int block = 0; block < blocks; block++) {
-        ApplyBlock(tmp, block, tmpLen[block]);
-    }
-    delete[] tmp;
-    delete[] tmpLen;
+  const uint16x8_t mask = MakeMask(hash);
+  uint16x8_t bucket = directory_[bucket_idx];
+  directory_[bucket_idx] = vorrq_u32(mask, bucket);
 }
 
 template <typename HashFamily>
@@ -443,12 +377,10 @@ template <typename HashFamily>
 SimdBlockFilterFixed<HashFamily>::Find(const uint64_t key) const noexcept {
   const auto hash = hasher_(key);
   const uint32_t bucket_idx = reduce(rotl64(hash, 32), bucketCount);
-  const mask32bytes_t mask = MakeMask(hash);
-  const mask32bytes_t bucket = directory_[bucket_idx];
-  uint32x4_t an1 = vbicq_u32(mask.first, bucket.first);
-  uint32x4_t an2 = vbicq_u32(mask.second,bucket.second);
-  uint32x4_t an = vorrq_u32(an1, an2);
-  uint64x2_t v64 = vreinterpretq_u64_u32(an);
+  const uint16x8_t mask = MakeMask(hash);
+  const uint16x8_t bucket = directory_[bucket_idx];
+  uint16x8_t an = vbicq_u16(mask, bucket);
+  uint64x2_t v64 = vreinterpretq_u64_u16(an);
   uint32x2_t v32 = vqmovn_u64(v64);
   uint64x1_t result = vreinterpret_u64_u32(v32);
   return vget_lane_u64(result, 0) == 0;
