@@ -322,7 +322,7 @@ class SimdBlockFilterFixed {
  private:
   // A helper function for Insert()/Find(). Turns a 32-bit hash into a 256-bit Bucket
   // with 1 single 1-bit set in each 32-bit lane.
-  static mask32bytes_t MakeMask(const uint32_t hash) noexcept;
+  static Bucket MakeMask(const uint16_t hash) noexcept;
 
   void ApplyBlock(uint64_t* tmp, int block, int len);
 
@@ -346,15 +346,11 @@ SimdBlockFilterFixed<HashFamily>::~SimdBlockFilterFixed() noexcept {
   directory_ = nullptr;
 }
 
-// The SIMD reinterpret_casts technically violate C++'s strict aliasing rules. However, we
-// compile with -fno-strict-aliasing.
 template <typename HashFamily>
 [[gnu::always_inline]] inline uint16x8_t
-SimdBlockFilterFixed<HashFamily>::MakeMask(const uint32_t hash) noexcept {
+SimdBlockFilterFixed<HashFamily>::MakeMask(const uint16_t hash) noexcept {
   const uint16x8_t ones = {1,1,1,1,1,1,1,1};
-  const uint16x8_t rehash = {0x79d8, 0xe722, 0xf2fb, 0x21ec, 0x121b, 0x2302, 0x705a, 0x6e87}
-
-  const uint32x4_t rehash2 = {0x705495c7U, 0x2df1424bU, 0x9efc4947U, 0x5c6bfb31U};
+  const uint16x8_t rehash = {0x79d8, 0xe722, 0xf2fb, 0x21ec, 0x121b, 0x2302, 0x705a, 0x6e87};
   uint16x8_t hash_data = {hash,hash,hash,hash,hash,hash,hash,hash};
   uint16x8_t answer = vmulq_u16(hash_data,rehash);
   answer = vshrq_n_u16(answer, 12);
@@ -369,7 +365,7 @@ SimdBlockFilterFixed<HashFamily>::Add(const uint64_t key) noexcept {
   const uint32_t bucket_idx = reduce(rotl64(hash, 32), bucketCount);
   const uint16x8_t mask = MakeMask(hash);
   uint16x8_t bucket = directory_[bucket_idx];
-  directory_[bucket_idx] = vorrq_u32(mask, bucket);
+  directory_[bucket_idx] = vorrq_u16(mask, bucket);
 }
 
 template <typename HashFamily>

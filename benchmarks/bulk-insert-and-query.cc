@@ -180,7 +180,7 @@ struct FilterAPI<SimdBlockFilterFixed<HashFamily>> {
     table->Add(key);
   }
   static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
-    table->AddAll(keys, start, end);
+    throw std::runtime_error("Unsupported");
   }
 
   CONTAIN_ATTRIBUTES
@@ -712,7 +712,6 @@ int main(int argc, char * argv[]) {
    {25, "Xor10"},{26, "Xor10.666"}, {37,"Bloom8 (addall)"},
    {38,"Bloom12 (addall)"}, {43,"Branchless Bloom8 (addall)"},
    {41,"Branchless Bloom12 (addall)"},{42,"Branchless Bloom16 (addall)"},
-   {40,"BlockedBloom (addall)"},
    {70,"SimpleBlockedBloom"}
   };
 #elif defined( __AVX2__)
@@ -1169,29 +1168,4 @@ int main(int argc, char * argv[]) {
       cout << setw(NAME_WIDTH) << names[40] << cf << endl;
   }
 #endif
-#ifdef __aarch64__
-  if (algorithmId == 40 || algorithmId < 0 || (algos.find(40) != algos.end())) {
-      auto cf = FilterBenchmark<SimdBlockFilterFixed<SimpleMixSplit>>(
-          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
-      cout << setw(NAME_WIDTH) << names[40] << cf << endl;
-  }
-#endif
-
-// broken algorithms (don't always find all key)
-/*
-  if (algorithmId == 25) {
-      auto cf = FilterBenchmark<
-          CuckooFilter<uint64_t, 9, PackedTable, SimpleMixSplit>>(
-          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed);
-      cout << setw(NAME_WIDTH) << "CuckooSemiSort9-2^n" << cf << endl;
-  }
-
-  if (algorithmId == 26) {
-      auto cf = FilterBenchmark<
-          CuckooFilter<uint64_t, 17, PackedTable, SimpleMixSplit>>(
-          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed);
-      cout << setw(NAME_WIDTH) << "CuckooSemiSort17-2^n" << cf << endl;
-  }
-*/
-
 }
