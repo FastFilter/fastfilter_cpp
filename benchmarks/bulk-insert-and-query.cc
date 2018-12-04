@@ -29,6 +29,7 @@
 #include "xorfilter_2n.h"
 #include "xorfilter_plus.h"
 #include "bloom.h"
+#include "counting_bloom.h"
 #include "gcs.h"
 #ifdef __AVX2__
 #include "gqf_cpp.h"
@@ -49,6 +50,7 @@ using namespace xorfilter2;
 using namespace xorfilter2n;
 using namespace xorfilter_plus;
 using namespace bloomfilter;
+using namespace counting_bloomfilter;
 using namespace gcsfilter;
 #ifdef __AVX2__
 using namespace gqfilter;
@@ -485,6 +487,37 @@ struct FilterAPI<BloomFilter<ItemType, bits_per_item, branchless, HashFamily>> {
   }
 };
 
+template <typename ItemType, size_t bits_per_item, bool branchless, typename HashFamily>
+struct FilterAPI<CountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily>> {
+  using Table = CountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily>;
+  static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
+  static void Add(uint64_t key, Table* table) {
+    table->Add(key);
+  }
+  static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
+      throw std::runtime_error("Unsupported");
+  }
+  CONTAIN_ATTRIBUTES
+  static bool Contain(uint64_t key, const Table * table) {
+    return (0 == table->Contain(key));
+  }
+};
+
+template <typename ItemType, size_t bits_per_item, bool branchless, typename HashFamily>
+struct FilterAPI<SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily>> {
+  using Table = SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily>;
+  static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
+  static void Add(uint64_t key, Table* table) {
+    table->Add(key);
+  }
+  static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
+      throw std::runtime_error("Unsupported");
+  }
+  CONTAIN_ATTRIBUTES
+  static bool Contain(uint64_t key, const Table * table) {
+    return (0 == table->Contain(key));
+  }
+};
 
 // assuming that first1,last1 and first2, last2 are sorted,
 // this tries to find out how many of first1,last1 can be
@@ -709,10 +742,13 @@ int main(int argc, char * argv[]) {
    {8,"Bloom12" }, {9,"Bloom16"}, {10,"BlockedBloom"},
    {11,"sort"}, {12,"Xor+8"}, {13,"Xor+16"},
    {14,"GCS"},  {22, "Xor10 (NBitArray)"}, {23, "Xor14 (NBitArray)"},
-   {25, "Xor10"},{26, "Xor10.666"}, {37,"Bloom8 (addall)"},
-   {38,"Bloom12 (addall)"}, {43,"Branchless Bloom8 (addall)"},
-   {41,"Branchless Bloom12 (addall)"},{42,"Branchless Bloom16 (addall)"},
+   {25, "Xor10"},{26, "Xor10.666"},
+   {37,"Bloom8 (addall)"}, {38,"Bloom12 (addall)"},
    {40,"BlockedBloom (addall)"},
+   {41,"Branchless Bloom12 (addall)"},
+   {42,"Branchless Bloom16 (addall)"},
+   {43,"Branchless Bloom8 (addall)"},
+   {44,"Counting Bloom8"}, {45,"Succinct Counting Bloom8"},
    {70,"SimpleBlockedBloom"}
   };
 #elif defined( __AVX2__)
@@ -722,10 +758,14 @@ int main(int argc, char * argv[]) {
    {8,"Bloom12" }, {9,"Bloom16"}, {10,"BlockedBloom"},
    {11,"sort"}, {12,"Xor+8"}, {13,"Xor+16"},
    {14,"GCS"}, {15,"CQF"}, {22, "Xor10 (NBitArray)"}, {23, "Xor14 (NBitArray)"},
-   {25, "Xor10"},{26, "Xor10.666"}, {37,"Bloom8 (addall)"},
-   {38,"Bloom12 (addall)"},{39,"Bloom16 (addall)"}, {43,"Branchless Bloom8 (addall)"},
-   {41,"Branchless Bloom12 (addall)"},{42,"Branchless Bloom16 (addall)"},
-   {40,"BlockedBloom (addall)"}, {63,"BlockedBloom16"}, {64,"BlockedBloom64"},
+   {25, "Xor10"},{26, "Xor10.666"},
+   {37,"Bloom8 (addall)"}, {38,"Bloom12 (addall)"}, {39,"Bloom16 (addall)"},
+   {40,"BlockedBloom (addall)"},
+   {41,"Branchless Bloom12 (addall)"},
+   {42,"Branchless Bloom16 (addall)"},
+   {43,"Branchless Bloom8 (addall)"},
+   {44,"Counting Bloom8"}, {45,"Succinct Counting Bloom8"},
+   {63,"BlockedBloom16"}, {64,"BlockedBloom64"},
    {70,"SimpleBlockedBloom"}
   };
 #else
@@ -735,9 +775,12 @@ int main(int argc, char * argv[]) {
    {8,"Bloom12" }, {9,"Bloom16"},
    {11,"sort"}, {12,"Xor+8"}, {13,"Xor+16"},
    {14,"GCS"}, {22, "Xor10 (NBitArray)"}, {23, "Xor14 (NBitArray)"},
-   {25, "Xor10"},{26, "Xor10.666"}, {37,"Bloom8 (addall)"},
-   {38,"Bloom12 (addall)"},{39,"Bloom16 (addall)"}, {43,"Branchless Bloom8 (addall)"},
-   {41,"Branchless Bloom12 (addall)"},{42,"Branchless Bloom16 (addall)"},
+   {25, "Xor10"},{26, "Xor10.666"},
+   {37,"Bloom8 (addall)"}, {38,"Bloom12 (addall)"}, {39,"Bloom16 (addall)"},
+   {41,"Branchless Bloom12 (addall)"},
+   {42,"Branchless Bloom16 (addall)"},
+   {43,"Branchless Bloom8 (addall)"},
+   {44,"Counting Bloom8"}, {45,"Succinct Counting Bloom8"},
    {70,"SimpleBlockedBloom"}
   };
 #endif
@@ -962,7 +1005,6 @@ int main(int argc, char * argv[]) {
       cout << setw(NAME_WIDTH) << names[10] << cf << endl;
   }
 #endif
-
 #ifdef __AVX2__
   if (algorithmId == 10 || algorithmId < 0 || (algos.find(10) != algos.end())) {
       auto cf = FilterBenchmark<SimdBlockFilterFixed<>>(
@@ -974,10 +1016,8 @@ int main(int argc, char * argv[]) {
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed);
       cout << setw(NAME_WIDTH) << names[64] << cf << endl;
   }
-
 #endif
 #ifdef __SSSE3__
-
   if (algorithmId == 63 || algorithmId < 0 || (algos.find(63) != algos.end())) {
       auto cf = FilterBenchmark<SimdBlockFilterFixed16<SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed);
@@ -1075,7 +1115,6 @@ int main(int argc, char * argv[]) {
       cout << setw(NAME_WIDTH) << names[22] << cf << endl;
   }
 
-
   if (algorithmId == 23 || (algos.find(23) != algos.end())) {
       auto cf = FilterBenchmark<
           XorFilter2<uint64_t, uint16_t, NBitArray<uint16_t, 14>, SimpleMixSplit>>(
@@ -1140,28 +1179,6 @@ int main(int argc, char * argv[]) {
       cout << setw(NAME_WIDTH) << names[39] << cf << endl;
   }
 
-
-
-  if (algorithmId == 43 || algorithmId < 0 || (algos.find(43) != algos.end())) {
-      auto cf = FilterBenchmark<
-          BloomFilter<uint64_t, 8, true, SimpleMixSplit>>(
-          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
-      cout << setw(NAME_WIDTH) << names[43] << cf << endl;
-  }
-
-  if (algorithmId == 41 || algorithmId < 0 || (algos.find(41) != algos.end())) {
-      auto cf = FilterBenchmark<
-          BloomFilter<uint64_t, 12, true, SimpleMixSplit>>(
-          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
-      cout << setw(NAME_WIDTH) << names[41] << cf << endl;
-  }
-
-  if (algorithmId == 42 || algorithmId < 0 || (algos.find(42) != algos.end())) {
-      auto cf = FilterBenchmark<
-          BloomFilter<uint64_t, 16, true, SimpleMixSplit>>(
-          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
-      cout << setw(NAME_WIDTH) << names[42] << cf << endl;
-  }
 #ifdef __AVX2__
   if (algorithmId == 40 || algorithmId < 0 || (algos.find(40) != algos.end())) {
       auto cf = FilterBenchmark<SimdBlockFilterFixed<SimpleMixSplit>>(
@@ -1176,6 +1193,41 @@ int main(int argc, char * argv[]) {
       cout << setw(NAME_WIDTH) << names[40] << cf << endl;
   }
 #endif
+
+  if (algorithmId == 41 || algorithmId < 0 || (algos.find(41) != algos.end())) {
+      auto cf = FilterBenchmark<
+          BloomFilter<uint64_t, 12, true, SimpleMixSplit>>(
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
+      cout << setw(NAME_WIDTH) << names[41] << cf << endl;
+  }
+
+  if (algorithmId == 42 || algorithmId < 0 || (algos.find(42) != algos.end())) {
+      auto cf = FilterBenchmark<
+          BloomFilter<uint64_t, 16, true, SimpleMixSplit>>(
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
+      cout << setw(NAME_WIDTH) << names[42] << cf << endl;
+  }
+
+  if (algorithmId == 43 || algorithmId < 0 || (algos.find(43) != algos.end())) {
+      auto cf = FilterBenchmark<
+          BloomFilter<uint64_t, 8, true, SimpleMixSplit>>(
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
+      cout << setw(NAME_WIDTH) << names[43] << cf << endl;
+  }
+
+  if (algorithmId == 44 || algorithmId < 0 || (algos.find(44) != algos.end())) {
+      auto cf = FilterBenchmark<
+          CountingBloomFilter<uint64_t, 8, true, SimpleMixSplit>>(
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed);
+      cout << setw(NAME_WIDTH) << names[44] << cf << endl;
+  }
+
+  if (algorithmId == 45 || algorithmId < 0 || (algos.find(45) != algos.end())) {
+      auto cf = FilterBenchmark<
+          SuccinctCountingBloomFilter<uint64_t, 8, true, SimpleMixSplit>>(
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed);
+      cout << setw(NAME_WIDTH) << names[45] << cf << endl;
+  }
 
 // broken algorithms (don't always find all key)
 /*
