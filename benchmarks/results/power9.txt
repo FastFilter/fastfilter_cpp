@@ -1,0 +1,163 @@
+                                                find    find    find    find    find                        optimal  wasted million
+                                      ns/add      0%     25%     50%     75%    100%        ε  bits/item  bits/item   space    keys
+
+adds   cycles: 417.6/key, instructions: (344.5/key, 0.82/cycle) cache misses: 13.37/key branch misses: 1.27/key
+0.00%  cycles:  50.6/key, instructions: ( 59.0/key, 1.17/cycle) cache misses:  3.03/key branch misses: 0.00/key
+0.25%  cycles:  50.0/key, instructions: ( 59.0/key, 1.18/cycle) cache misses:  3.03/key branch misses: 0.00/key
+0.50%  cycles:  49.9/key, instructions: ( 59.0/key, 1.18/cycle) cache misses:  3.03/key branch misses: 0.00/key
+0.75%  cycles:  49.9/key, instructions: ( 59.0/key, 1.18/cycle) cache misses:  3.03/key branch misses: 0.00/key
+1.00%  cycles:  49.8/key, instructions: ( 59.0/key, 1.18/cycle) cache misses:  3.03/key branch misses: 0.00/key
+                            Xor8      113.96   13.48   13.31   13.28   13.28   13.27  0.3911%       9.84       8.00   23.0%    10.0
+
+adds   cycles: 444.5/key, instructions: (353.9/key, 0.80/cycle) cache misses: 13.43/key branch misses: 1.28/key
+0.00%  cycles:  78.6/key, instructions: ( 74.0/key, 0.94/cycle) cache misses:  3.02/key branch misses: 0.00/key
+0.25%  cycles:  77.8/key, instructions: ( 74.0/key, 0.95/cycle) cache misses:  3.02/key branch misses: 0.00/key
+0.50%  cycles:  77.7/key, instructions: ( 74.0/key, 0.95/cycle) cache misses:  3.02/key branch misses: 0.00/key
+0.75%  cycles:  77.9/key, instructions: ( 74.0/key, 0.95/cycle) cache misses:  3.02/key branch misses: 0.00/key
+1.00%  cycles:  77.9/key, instructions: ( 74.0/key, 0.95/cycle) cache misses:  3.02/key branch misses: 0.00/key
+                           Xor12      120.99   20.96   20.73   20.72   20.77   20.77  0.0250%      14.76      11.97   23.3%    10.0
+
+adds   cycles: 442.3/key, instructions: (347.5/key, 0.79/cycle) cache misses: 13.44/key branch misses: 1.28/key
+0.00%  cycles:  87.9/key, instructions: ( 60.0/key, 0.68/cycle) cache misses:  3.03/key branch misses: 0.00/key
+0.25%  cycles:  87.7/key, instructions: ( 60.0/key, 0.68/cycle) cache misses:  3.03/key branch misses: 0.00/key
+0.50%  cycles:  87.7/key, instructions: ( 60.0/key, 0.68/cycle) cache misses:  3.03/key branch misses: 0.00/key
+0.75%  cycles:  87.9/key, instructions: ( 60.0/key, 0.68/cycle) cache misses:  3.03/key branch misses: 0.00/key
+1.00%  cycles:  87.7/key, instructions: ( 60.0/key, 0.68/cycle) cache misses:  3.03/key branch misses: 0.00/key
+                           Xor16      120.32   23.44   23.39   23.38   23.42   23.39  0.0014%      19.68      16.12   22.1%    10.0
+
+adds   cycles: 247.6/key, instructions: (191.2/key, 0.77/cycle) cache misses:  3.19/key branch misses: 2.15/key
+0.00%  cycles:  66.5/key, instructions: ( 54.5/key, 0.82/cycle) cache misses:  1.57/key branch misses: 0.50/key
+0.25%  cycles:  66.3/key, instructions: ( 54.5/key, 0.82/cycle) cache misses:  1.57/key branch misses: 0.50/key
+0.50%  cycles:  66.3/key, instructions: ( 54.5/key, 0.82/cycle) cache misses:  1.57/key branch misses: 0.50/key
+0.75%  cycles:  66.3/key, instructions: ( 54.5/key, 0.82/cycle) cache misses:  1.57/key branch misses: 0.50/key
+1.00%  cycles:  66.3/key, instructions: ( 54.5/key, 0.82/cycle) cache misses:  1.57/key branch misses: 0.50/key
+                         Cuckoo8       65.84   17.69   17.64   17.64   17.63   17.64  2.9087%       8.51       5.10   66.8%    10.0
+
+adds   cycles: 290.9/key, instructions: (162.1/key, 0.56/cycle) cache misses:  3.11/key branch misses: 2.44/key
+0.00%  cycles:  70.3/key, instructions: ( 52.5/key, 0.75/cycle) cache misses:  1.70/key branch misses: 0.50/key
+0.25%  cycles:  69.6/key, instructions: ( 52.5/key, 0.75/cycle) cache misses:  1.70/key branch misses: 0.50/key
+0.50%  cycles:  69.5/key, instructions: ( 52.5/key, 0.76/cycle) cache misses:  1.70/key branch misses: 0.50/key
+0.75%  cycles:  69.5/key, instructions: ( 52.5/key, 0.75/cycle) cache misses:  1.70/key branch misses: 0.50/key
+1.00%  cycles:  69.5/key, instructions: ( 52.5/key, 0.76/cycle) cache misses:  1.70/key branch misses: 0.50/key
+                        Cuckoo12       77.33   18.74   18.54   18.53   18.53   18.52  0.1835%      12.77       9.09   40.4%    10.0
+
+adds   cycles: 304.0/key, instructions: (150.4/key, 0.49/cycle) cache misses:  3.08/key branch misses: 2.06/key
+0.00%  cycles:  78.4/key, instructions: ( 52.5/key, 0.67/cycle) cache misses:  1.79/key branch misses: 0.50/key
+0.25%  cycles:  78.0/key, instructions: ( 52.5/key, 0.67/cycle) cache misses:  1.79/key branch misses: 0.50/key
+0.50%  cycles:  77.8/key, instructions: ( 52.5/key, 0.67/cycle) cache misses:  1.79/key branch misses: 0.50/key
+0.75%  cycles:  77.8/key, instructions: ( 52.5/key, 0.67/cycle) cache misses:  1.79/key branch misses: 0.50/key
+1.00%  cycles:  78.0/key, instructions: ( 52.5/key, 0.67/cycle) cache misses:  1.79/key branch misses: 0.50/key
+                        Cuckoo16       80.81   20.89   20.78   20.74   20.75   20.81  0.0115%      17.02      13.08   30.1%    10.0
+
+adds   cycles: 467.7/key, instructions: (323.1/key, 0.69/cycle) cache misses:  4.57/key branch misses: 3.27/key
+0.00%  cycles: 129.1/key, instructions: ( 98.5/key, 0.76/cycle) cache misses:  1.88/key branch misses: 0.50/key
+0.25%  cycles: 136.3/key, instructions: ( 92.2/key, 0.68/cycle) cache misses:  1.81/key branch misses: 0.75/key
+0.50%  cycles: 144.3/key, instructions: ( 86.0/key, 0.60/cycle) cache misses:  1.75/key branch misses: 1.00/key
+0.75%  cycles: 152.4/key, instructions: ( 79.7/key, 0.52/cycle) cache misses:  1.68/key branch misses: 1.24/key
+1.00%  cycles: 160.1/key, instructions: ( 73.4/key, 0.46/cycle) cache misses:  1.62/key branch misses: 1.49/key
+                CuckooSemiSort13      124.24   34.36   36.29   38.42   40.58   42.60  0.0902%      12.77      10.11   26.2%    10.0
+
+adds   cycles:  72.4/key, instructions: ( 88.0/key, 1.22/cycle) cache misses:  6.01/key branch misses: 0.00/key
+0.00%  cycles:  94.7/key, instructions: ( 53.7/key, 0.57/cycle) cache misses:  1.76/key branch misses: 1.00/key
+0.25%  cycles:  86.2/key, instructions: ( 63.5/key, 0.74/cycle) cache misses:  2.82/key branch misses: 0.75/key
+0.50%  cycles:  77.7/key, instructions: ( 73.4/key, 0.94/cycle) cache misses:  3.88/key branch misses: 0.50/key
+0.75%  cycles:  69.3/key, instructions: ( 83.2/key, 1.20/cycle) cache misses:  4.94/key branch misses: 0.25/key
+1.00%  cycles:  60.9/key, instructions: ( 93.0/key, 1.53/cycle) cache misses:  6.00/key branch misses: 0.00/key
+                          Bloom8       19.27   25.20   22.93   20.68   18.42   16.22  2.1530%       8.00       5.54   44.5%    10.0
+
+adds   cycles: 156.9/key, instructions: (112.0/key, 0.71/cycle) cache misses:  7.94/key branch misses: 0.00/key
+0.00%  cycles: 107.5/key, instructions: ( 52.4/key, 0.49/cycle) cache misses:  1.72/key branch misses: 0.91/key
+0.25%  cycles: 109.4/key, instructions: ( 67.6/key, 0.62/cycle) cache misses:  3.27/key branch misses: 0.69/key
+0.50%  cycles: 111.6/key, instructions: ( 82.7/key, 0.74/cycle) cache misses:  4.83/key branch misses: 0.46/key
+0.75%  cycles: 113.9/key, instructions: ( 97.9/key, 0.86/cycle) cache misses:  6.39/key branch misses: 0.23/key
+1.00%  cycles: 116.3/key, instructions: (113.0/key, 0.97/cycle) cache misses:  7.94/key branch misses: 0.00/key
+                         Bloom12       41.79   28.64   29.15   29.74   30.36   31.00  0.3114%      12.00       8.33   44.1%    10.0
+
+adds   cycles: 264.8/key, instructions: (148.0/key, 0.56/cycle) cache misses: 10.89/key branch misses: 0.00/key
+0.00%  cycles: 120.9/key, instructions: ( 52.9/key, 0.44/cycle) cache misses:  1.76/key branch misses: 0.92/key
+0.25%  cycles: 148.6/key, instructions: ( 75.7/key, 0.51/cycle) cache misses:  4.04/key branch misses: 0.69/key
+0.50%  cycles: 176.5/key, instructions: ( 98.4/key, 0.56/cycle) cache misses:  6.32/key branch misses: 0.46/key
+0.75%  cycles: 204.7/key, instructions: (121.2/key, 0.59/cycle) cache misses:  8.60/key branch misses: 0.23/key
+1.00%  cycles: 232.4/key, instructions: (144.0/key, 0.62/cycle) cache misses: 10.88/key branch misses: 0.00/key
+                         Bloom16       70.57   32.23   39.62   47.04   54.55   61.95  0.0446%      16.00      11.13   43.8%    10.0
+Sort time: 82 ns/key
+
+adds   cycles: 536.4/key, instructions: (289.1/key, 0.54/cycle) cache misses: 11.32/key branch misses: 1.96/key
+0.00%  cycles:  86.8/key, instructions: ( 84.0/key, 0.97/cycle) cache misses:  4.81/key branch misses: 0.44/key
+0.25%  cycles:  86.2/key, instructions: ( 84.2/key, 0.98/cycle) cache misses:  4.85/key branch misses: 0.43/key
+0.50%  cycles:  85.9/key, instructions: ( 84.4/key, 0.98/cycle) cache misses:  4.89/key branch misses: 0.41/key
+0.75%  cycles:  85.6/key, instructions: ( 84.7/key, 0.99/cycle) cache misses:  4.92/key branch misses: 0.40/key
+1.00%  cycles:  85.4/key, instructions: ( 84.9/key, 0.99/cycle) cache misses:  4.96/key branch misses: 0.39/key
+                           Xor+8      144.89   23.10   22.93   22.85   22.78   22.73  0.3883%       9.15       8.01   14.3%    10.0
+
+adds   cycles: 549.7/key, instructions: (293.5/key, 0.53/cycle) cache misses: 11.35/key branch misses: 1.95/key
+0.00%  cycles: 115.9/key, instructions: ( 85.7/key, 0.74/cycle) cache misses:  4.98/key branch misses: 0.43/key
+0.25%  cycles: 115.2/key, instructions: ( 85.9/key, 0.75/cycle) cache misses:  5.01/key branch misses: 0.42/key
+0.50%  cycles: 115.3/key, instructions: ( 86.1/key, 0.75/cycle) cache misses:  5.04/key branch misses: 0.41/key
+0.75%  cycles: 115.5/key, instructions: ( 86.4/key, 0.75/cycle) cache misses:  5.07/key branch misses: 0.40/key
+1.00%  cycles: 115.7/key, instructions: ( 86.6/key, 0.75/cycle) cache misses:  5.09/key branch misses: 0.39/key
+                          Xor+16      148.54   30.90   30.70   30.72   30.77   30.88  0.0016%      17.82      15.90   12.0%    10.0
+
+adds   cycles: 1086.5/key, instructions: (749.4/key, 0.69/cycle) cache misses:  0.11/key branch misses: 36.69/key
+0.00%  cycles: 493.6/key, instructions: (573.9/key, 1.16/cycle) cache misses:  3.41/key branch misses: 2.92/key
+0.25%  cycles: 493.0/key, instructions: (574.2/key, 1.16/cycle) cache misses:  3.41/key branch misses: 2.90/key
+0.50%  cycles: 492.7/key, instructions: (574.2/key, 1.17/cycle) cache misses:  3.41/key branch misses: 2.88/key
+0.75%  cycles: 492.8/key, instructions: (574.5/key, 1.17/cycle) cache misses:  3.41/key branch misses: 2.87/key
+1.00%  cycles: 492.8/key, instructions: (574.7/key, 1.17/cycle) cache misses:  3.42/key branch misses: 2.86/key
+                             GCS      290.02  131.14  130.84  130.75  130.79  130.77  0.3927%      10.04       7.99   25.6%    10.0
+
+adds   cycles:  93.1/key, instructions: ( 86.0/key, 0.92/cycle) cache misses:  3.26/key branch misses: 0.00/key
+0.00%  cycles:  88.3/key, instructions: (125.0/key, 1.42/cycle) cache misses:  3.38/key branch misses: 0.00/key
+0.25%  cycles:  87.5/key, instructions: (125.0/key, 1.43/cycle) cache misses:  3.38/key branch misses: 0.00/key
+0.50%  cycles:  87.3/key, instructions: (125.0/key, 1.43/cycle) cache misses:  3.38/key branch misses: 0.00/key
+0.75%  cycles:  87.3/key, instructions: (125.0/key, 1.43/cycle) cache misses:  3.38/key branch misses: 0.00/key
+1.00%  cycles:  87.2/key, instructions: (125.0/key, 1.43/cycle) cache misses:  3.38/key branch misses: 0.00/key
+              SimpleBlockedBloom       24.76   23.49   23.28   23.23   23.22   23.21  0.9652%      10.89       6.69   62.7%    10.0
+
+adds   cycles: 139.4/key, instructions: (223.6/key, 1.60/cycle) cache misses:  5.80/key branch misses: 0.00/key
+0.00%  cycles:  96.5/key, instructions: ( 53.7/key, 0.56/cycle) cache misses:  1.77/key branch misses: 0.99/key
+0.25%  cycles:  87.6/key, instructions: ( 63.5/key, 0.73/cycle) cache misses:  2.79/key branch misses: 0.74/key
+0.50%  cycles:  78.8/key, instructions: ( 73.4/key, 0.93/cycle) cache misses:  3.81/key branch misses: 0.50/key
+0.75%  cycles:  69.9/key, instructions: ( 83.2/key, 1.19/cycle) cache misses:  4.83/key branch misses: 0.25/key
+1.00%  cycles:  61.3/key, instructions: ( 93.0/key, 1.52/cycle) cache misses:  5.85/key branch misses: 0.00/key
+                 Bloom8 (addall)       37.61   25.67   23.30   20.96   18.60   16.30  2.1624%       8.00       5.53   44.6%    10.0
+
+adds   cycles: 187.4/key, instructions: (291.6/key, 1.56/cycle) cache misses:  7.76/key branch misses: 0.05/key
+0.00%  cycles: 109.7/key, instructions: ( 52.4/key, 0.48/cycle) cache misses:  1.71/key branch misses: 0.91/key
+0.25%  cycles: 111.0/key, instructions: ( 67.6/key, 0.61/cycle) cache misses:  3.20/key branch misses: 0.68/key
+0.50%  cycles: 113.6/key, instructions: ( 82.7/key, 0.73/cycle) cache misses:  4.70/key branch misses: 0.46/key
+0.75%  cycles: 115.7/key, instructions: ( 97.9/key, 0.85/cycle) cache misses:  6.20/key branch misses: 0.23/key
+1.00%  cycles: 118.0/key, instructions: (113.0/key, 0.96/cycle) cache misses:  7.70/key branch misses: 0.00/key
+                Bloom12 (addall)       50.38   29.21   29.65   30.26   30.83   31.46  0.3146%      12.00       8.31   44.4%    10.0
+
+adds   cycles: 250.9/key, instructions: (393.6/key, 1.57/cycle) cache misses: 10.66/key branch misses: 0.01/key
+0.00%  cycles: 121.2/key, instructions: ( 52.9/key, 0.44/cycle) cache misses:  1.76/key branch misses: 0.92/key
+0.25%  cycles: 148.8/key, instructions: ( 75.7/key, 0.51/cycle) cache misses:  4.04/key branch misses: 0.69/key
+0.50%  cycles: 176.7/key, instructions: ( 98.4/key, 0.56/cycle) cache misses:  6.32/key branch misses: 0.46/key
+0.75%  cycles: 204.7/key, instructions: (121.2/key, 0.59/cycle) cache misses:  8.60/key branch misses: 0.23/key
+1.00%  cycles: 232.5/key, instructions: (144.0/key, 0.62/cycle) cache misses: 10.88/key branch misses: 0.00/key
+                Bloom16 (addall)       67.21   32.31   39.67   47.11   54.55   61.98  0.0471%      16.00      11.05   44.8%    10.0
+
+adds   cycles: 143.9/key, instructions: (223.6/key, 1.55/cycle) cache misses:  5.80/key branch misses: 0.00/key
+0.00%  cycles:  59.7/key, instructions: ( 62.6/key, 1.05/cycle) cache misses:  2.92/key branch misses: 0.30/key
+0.25%  cycles:  60.5/key, instructions: ( 68.9/key, 1.14/cycle) cache misses:  3.66/key branch misses: 0.22/key
+0.50%  cycles:  60.7/key, instructions: ( 75.3/key, 1.24/cycle) cache misses:  4.39/key branch misses: 0.15/key
+0.75%  cycles:  61.3/key, instructions: ( 81.6/key, 1.33/cycle) cache misses:  5.12/key branch misses: 0.07/key
+1.00%  cycles:  61.9/key, instructions: ( 88.0/key, 1.42/cycle) cache misses:  5.85/key branch misses: 0.00/key
+      Branchless Bloom8 (addall)       38.79   15.89   16.85   16.16   16.30   16.47  2.1582%       8.00       5.53   44.6%    10.0
+
+adds   cycles: 189.5/key, instructions: (291.6/key, 1.54/cycle) cache misses:  7.75/key branch misses: 0.05/key
+0.00%  cycles:  79.0/key, instructions: ( 62.2/key, 0.79/cycle) cache misses:  2.95/key branch misses: 0.24/key
+0.25%  cycles:  87.7/key, instructions: ( 73.6/key, 0.84/cycle) cache misses:  4.13/key branch misses: 0.18/key
+0.50%  cycles:  96.9/key, instructions: ( 85.1/key, 0.88/cycle) cache misses:  5.32/key branch misses: 0.12/key
+0.75%  cycles: 106.3/key, instructions: ( 96.5/key, 0.91/cycle) cache misses:  6.50/key branch misses: 0.06/key
+1.00%  cycles: 115.6/key, instructions: (108.0/key, 0.93/cycle) cache misses:  7.69/key branch misses: 0.00/key
+     Branchless Bloom12 (addall)       50.88   21.08   23.37   25.82   28.33   30.80  0.3157%      12.00       8.31   44.5%    10.0
+
+adds   cycles: 245.7/key, instructions: (393.6/key, 1.60/cycle) cache misses: 10.71/key branch misses: 0.06/key
+0.00%  cycles:  95.1/key, instructions: ( 62.4/key, 0.66/cycle) cache misses:  2.98/key branch misses: 0.27/key
+0.25%  cycles: 128.9/key, instructions: ( 81.3/key, 0.63/cycle) cache misses:  4.95/key branch misses: 0.20/key
+0.50%  cycles: 162.9/key, instructions: (100.2/key, 0.62/cycle) cache misses:  6.93/key branch misses: 0.13/key
+0.75%  cycles: 197.2/key, instructions: (119.1/key, 0.60/cycle) cache misses:  8.91/key branch misses: 0.07/key
+1.00%  cycles: 231.0/key, instructions: (138.0/key, 0.60/cycle) cache misses: 10.88/key branch misses: 0.00/key
+     Branchless Bloom16 (addall)       65.83   25.34   34.36   43.44   52.56   61.57  0.0461%      16.00      11.08   44.4%    10.0

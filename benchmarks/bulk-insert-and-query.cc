@@ -182,7 +182,7 @@ struct FilterAPI<SimdBlockFilterFixed<HashFamily>> {
     table->Add(key);
   }
   static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
-    table->AddAll(keys, start, end);
+    throw std::runtime_error("Unsupported");
   }
 
   CONTAIN_ATTRIBUTES
