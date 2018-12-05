@@ -24,9 +24,9 @@ inline int select64(uint64_t x, int n) {
     // with this, "add" is around 310 ns/key at 10000000 keys
     // from http://bitmagic.io/rank-select.html
     // https://github.com/Forceflow/libmorton/issues/6
-    // This is a rather unusual usage of the bit deposit operation,
+    // This is a rather unusual usage of the pdep (bit deposit) operation,
     // as we use the x as the mask, and we use n as the value.
-    // We deposit (move) the bits of x = 1 << n to the locations
+    // We deposit (move) the bits of 1 << n to the locations
     // defined by x.
     uint64_t d = _pdep_u64(1ULL << n, x);
     // and now we count the trailing zeroes, to find out
@@ -34,7 +34,7 @@ inline int select64(uint64_t x, int n) {
     return __builtin_ctzl(d);
     // return _tzcnt_u64(d);
 #else
-    // slow implementation
+    // alternative implementation
     // with this, "add" is around 680 ns/key at 10000000 keys
     for(int i = 0; i < 64; i++) {
         if ((x & 1) == 1) {
@@ -50,7 +50,7 @@ inline int select64(uint64_t x, int n) {
 
 inline int numberOfLeadingZeros64(uint64_t x) {
     // If x is 0, the result is undefined.
-    return x == 0 ? 64 : __builtin_clzl(x);
+    return __builtin_clzl(x);
 }
 
 enum Status {
@@ -186,7 +186,6 @@ void SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily
     Increment(size_t group, int bit) {
     // realCount[(group << 6) + bit]++;
     uint64_t m = data[group];
-    int d = (m >> bit) & 1;
     uint64_t c = counts[group];
     if ((c & 0xc000000000000000L) != 0) {
         // an overflow entry, or overflowing now
@@ -226,6 +225,7 @@ void SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily
     data[group] |= 1ULL << bit;
     int bitsBefore = bitCount64(m & (0xffffffffffffffffL >> (63 - bit)));
     int before = select64((c << 1) | 1, bitsBefore);
+    int d = (m >> bit) & 1;
     int insertAt = before - d;
     uint64_t mask = (1ULL << insertAt) - 1;
     uint64_t left = c & ~mask;
