@@ -6,19 +6,52 @@
 
 #include "hashutil.h"
 
-#include <array>
-#include <type_traits>
 #if defined(__BMI2__)
 #include <immintrin.h>
 #endif
-
-
-
 
 using namespace std;
 using namespace hashing;
 
 namespace counting_bloomfilter {
+
+inline int bitCount64(uint64_t x) {
+    return __builtin_popcountll(x);
+}
+
+inline int select64(uint64_t x, int n) {
+#if defined(__BMI2__)
+    // with this, "add" is around 310 ns/key at 10000000 keys
+    // from http://bitmagic.io/rank-select.html
+    // https://github.com/Forceflow/libmorton/issues/6
+    // This is a rather unusual usage of the bit deposit operation,
+    // as we use the x as the mask, and we use n as the value.
+    // We deposit (move) the bits of x = 1 << n to the locations
+    // defined by x.
+    uint64_t d = _pdep_u64(1ULL << n, x);
+    // and now we count the trailing zeroes, to find out
+    // where the '1' was deposited
+    return __builtin_ctzl(d);
+    // return _tzcnt_u64(d);
+#else
+    // slow implementation
+    // with this, "add" is around 680 ns/key at 10000000 keys
+    for(int i = 0; i < 64; i++) {
+        if ((x & 1) == 1) {
+            if (n-- == 0) {
+                return i;
+            }
+        }
+        x >>= 1;
+    }
+    return -1;
+#endif
+}
+
+inline int numberOfLeadingZeros64(uint64_t x) {
+    // If x is 0, the result is undefined.
+    return x == 0 ? 64 : __builtin_clzl(x);
+}
 
 enum Status {
   Ok = 0,
@@ -66,7 +99,7 @@ Status CountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::
   uint32_t b = (uint32_t)hash;
   for (int i = 0; i < k; i++) {
     uint index = reduce(a, this->arrayLength);
-    data[index] += 1L << ((a << 2) & 63);
+    data[index] += 1ULL << ((a << 2) & 63);
     a += b;
   }
   return Ok;
@@ -147,34 +180,6 @@ Status SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless, HashFami
   return Ok;
 }
 
-inline int numberOfLeadingZeros64(uint64_t x) {
-    // If x is 0, the result is undefined.
-    return x == 0 ? 64 : __builtin_clzl(x);
-}
-
-inline int bitCount64(uint64_t x) {
-    return __builtin_popcountll(x);
-}
-
-
-inline int selectInLong64(uint64_t x, int n) {
-    // from http://bitmagic.io/rank-select.html
-    // https://github.com/Forceflow/libmorton/issues/6
-    uint64_t d = _pdep_u64(1L << n, x);
-    return _tzcnt_u64(d);
-    /*
-    for(int i = 0; i < 64; i++) {
-        if ((x & 1) == 1) {
-            if (n-- == 0) {
-                return i;
-            }
-        }
-        x >>= 1;
-    }
-    return -1;
-    */
-}
-
 template <typename ItemType, size_t bits_per_item, bool branchless,
           typename HashFamily, int k>
 void SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::
@@ -191,8 +196,8 @@ void SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily
             // allocate overflow
             index = nextFreeOverflow;
             if (index >= overflowLength) {
-                ::std::cout << "WARNING: overflow too small\n";
-                data[group] |= 1L << bit;
+                ::std::cout << "ERROR: overflow too small\n";
+                data[group] |= 1ULL << bit;
                 return;
             }
             nextFreeOverflow = (size_t) overflow[index];
@@ -203,7 +208,7 @@ void SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily
             // convert to a pointer
             for (int i = 0; i < 64; i++) {
                 int n = ReadCount(group, i);
-                overflow[index + i / 16] += n * (1L << (i * 4));
+                overflow[index + i / 16] += n * (1ULL << (i * 4));
             }
             uint64_t count = 64;
             c = 0x8000000000000000L | (count << 32) | index;
@@ -211,21 +216,21 @@ void SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily
         } else {
             // already
             index = (size_t) (c & 0x0fffffff);
-            c += 1L << 32;
+            c += 1ULL << 32;
             counts[group] = c;
         }
-        overflow[index + bit / 16] += (1L << (bit * 4));
-        data[group] |= 1L << bit;
+        overflow[index + bit / 16] += (1ULL << (bit * 4));
+        data[group] |= 1ULL << bit;
         return;
     }
-    data[group] |= 1L << bit;
+    data[group] |= 1ULL << bit;
     int bitsBefore = bitCount64(m & (0xffffffffffffffffL >> (63 - bit)));
-    int before = selectInLong64((c << 1) | 1, bitsBefore);
+    int before = select64((c << 1) | 1, bitsBefore);
     int insertAt = before - d;
-    uint64_t mask = (1L << insertAt) - 1;
+    uint64_t mask = (1ULL << insertAt) - 1;
     uint64_t left = c & ~mask;
     uint64_t right = c & mask;
-    c = (left << 1) | ((1L ^ d) << insertAt) | right;
+    c = (left << 1) | ((1ULL ^ d) << insertAt) | right;
     counts[group] = c;
 }
 
@@ -246,8 +251,8 @@ int SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily,
         return (int) (n & 15);
     }
     int bitsBefore = bitCount64(m & (0xffffffffffffffffL >> (63 - bit)));
-    int bitPos = selectInLong64(c, bitsBefore - 1);
-    uint64_t y = ((c << (63 - bitPos)) << 1) | (1L << (63 - bitPos));
+    int bitPos = select64(c, bitsBefore - 1);
+    uint64_t y = ((c << (63 - bitPos)) << 1) | (1ULL << (63 - bitPos));
     return numberOfLeadingZeros64(y) + 1;
 }
 
