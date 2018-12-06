@@ -495,7 +495,7 @@ struct FilterAPI<CountingBloomFilter<ItemType, bits_per_item, branchless, HashFa
     table->Add(key);
   }
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
-      throw std::runtime_error("Unsupported");
+    table->AddAll(keys, start, end);
   }
   CONTAIN_ATTRIBUTES
   static bool Contain(uint64_t key, const Table * table) {
@@ -1218,7 +1218,7 @@ int main(int argc, char * argv[]) {
   if (algorithmId == 44 || algorithmId < 0 || (algos.find(44) != algos.end())) {
       auto cf = FilterBenchmark<
           CountingBloomFilter<uint64_t, 10, true, SimpleMixSplit>>(
-          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed);
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
       cout << setw(NAME_WIDTH) << names[44] << cf << endl;
   }
 
