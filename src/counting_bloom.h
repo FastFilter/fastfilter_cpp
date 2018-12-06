@@ -73,7 +73,7 @@ class CountingBloomFilter {
   uint64_t *data;
   size_t arrayLength;
   HashFamily hasher;
-  const int blockShift = 16;
+  const int blockShift = 14;
   const int blockLen = 1 << blockShift;
 
   void AddBlock(uint32_t *tmp, int block, int len);
@@ -100,7 +100,7 @@ Status CountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::
   uint32_t b = (uint32_t)hash;
   for (int i = 0; i < k; i++) {
     uint index = reduce(a, this->arrayLength);
-    data[index] += 1ULL << ((a << 2) & 63);
+    data[index] += 1ULL << ((a << 2) & 0x3f);
     a += b;
   }
   return Ok;
@@ -112,7 +112,7 @@ void CountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::
     AddBlock(uint32_t *tmp, int block, int len) {
   for (int i = 0; i < len; i++) {
     int index = tmp[(block << blockShift) + i];
-    data[index >> 6] += 1ULL << ((index << 2) & 63);
+    data[index >> 4] += 1ULL << ((index << 2) & 0x3f);
   }
 }
 
@@ -132,7 +132,7 @@ Status CountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::
       int index = reduce(a, this->arrayLength);
       int block = index >> blockShift;
       int len = tmpLen[block];
-      tmp[(block << blockShift) + len] = (index << 6) + (a & 63);
+      tmp[(block << blockShift) + len] = (index << 4) + (a & 0xf);
       tmpLen[block] = len + 1;
       if (len + 1 == blockLen) {
         AddBlock(tmp, block, len + 1);
@@ -158,7 +158,7 @@ Status CountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::
   uint32_t b = (uint32_t)hash;
   for (int i = 0; i < k; i++) {
     uint index = reduce(a, this->arrayLength);
-    if (((data[index] >> ((a << 2) & 63)) & 0xf) == 0) {
+    if (((data[index] >> ((a << 2) & 0x3f)) & 0xf) == 0) {
       return NotFound;
     }
     a += b;
@@ -181,7 +181,7 @@ class SuccinctCountingBloomFilter {
   size_t overflowLength;
   size_t nextFreeOverflow;
   HashFamily hasher;
-  const int blockShift = 13;
+  const int blockShift = 14;
   const int blockLen = 1 << blockShift;
 
   void Increment(size_t group, int bit);
