@@ -73,6 +73,10 @@ class CountingBloomFilter {
   uint64_t *data;
   size_t arrayLength;
   HashFamily hasher;
+  const int blockShift = 16;
+  const int blockLen = 1 << blockShift;
+
+  void AddBlock(uint32_t *tmp, int block, int len);
 
 public:
   explicit CountingBloomFilter(const size_t n) : hasher() {
@@ -80,13 +84,10 @@ public:
     this->arrayLength = (bitCount + 63) / 64;
     data = new uint64_t[arrayLength]();
   }
-
   ~CountingBloomFilter() { delete[] data; }
-
   Status Add(const ItemType &item);
-
+  Status AddAll(const vector<ItemType> data, const size_t start, const size_t end);
   Status Contain(const ItemType &item) const;
-
   size_t SizeInBytes() const { return arrayLength * 8; }
 };
 
@@ -102,6 +103,49 @@ Status CountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::
     data[index] += 1ULL << ((a << 2) & 63);
     a += b;
   }
+  return Ok;
+}
+
+template <typename ItemType, size_t bits_per_item, bool branchless,
+          typename HashFamily, int k>
+void CountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::
+    AddBlock(uint32_t *tmp, int block, int len) {
+  for (int i = 0; i < len; i++) {
+    int index = tmp[(block << blockShift) + i];
+    data[index >> 6] += 1ULL << ((index << 2) & 63);
+  }
+}
+
+template <typename ItemType, size_t bits_per_item, bool branchless,
+          typename HashFamily, int k>
+Status CountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::
+    AddAll(const vector<ItemType> keys, const size_t start, const size_t end) {
+  int blocks = 1 + arrayLength / blockLen;
+  uint32_t *tmp = new uint32_t[blocks * blockLen];
+  int *tmpLen = new int[blocks]();
+  for (size_t i = start; i < end; i++) {
+    uint64_t key = keys[i];
+    uint64_t hash = hasher(key);
+    uint32_t a = (uint32_t)(hash >> 32);
+    uint32_t b = (uint32_t)hash;
+    for (int j = 0; j < k; j++) {
+      int index = reduce(a, this->arrayLength);
+      int block = index >> blockShift;
+      int len = tmpLen[block];
+      tmp[(block << blockShift) + len] = (index << 6) + (a & 63);
+      tmpLen[block] = len + 1;
+      if (len + 1 == blockLen) {
+        AddBlock(tmp, block, len + 1);
+        tmpLen[block] = 0;
+      }
+      a += b;
+    }
+  }
+  for (int block = 0; block < blocks; block++) {
+    AddBlock(tmp, block, tmpLen[block]);
+  }
+  delete[] tmp;
+  delete[] tmpLen;
   return Ok;
 }
 
@@ -137,9 +181,12 @@ class SuccinctCountingBloomFilter {
   size_t overflowLength;
   size_t nextFreeOverflow;
   HashFamily hasher;
+  const int blockShift = 13;
+  const int blockLen = 1 << blockShift;
 
   void Increment(size_t group, int bit);
   int ReadCount(size_t group, int bit);
+  void AddBlock(uint32_t *tmp, int block, int len);
 
 public:
   explicit SuccinctCountingBloomFilter(const size_t n) : hasher() {
@@ -155,13 +202,10 @@ public:
         overflow[i] = i + 4;
     }
   }
-
   ~SuccinctCountingBloomFilter() { delete[] data; delete[] counts; delete[] overflow; }
-
   Status Add(const ItemType &item);
-
+  Status AddAll(const vector<ItemType> data, const size_t start, const size_t end);
   Status Contain(const ItemType &item) const;
-
   size_t SizeInBytes() const { return arrayLength * 8 * 2 + overflowLength * 8; }
 };
 
@@ -177,6 +221,50 @@ Status SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless, HashFami
     Increment(group, a & 63);
     a += b;
   }
+  return Ok;
+}
+
+template <typename ItemType, size_t bits_per_item, bool branchless,
+          typename HashFamily, int k>
+void SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::
+    AddBlock(uint32_t *tmp, int block, int len) {
+  for (int i = 0; i < len; i++) {
+    uint32_t index = tmp[(block << blockShift) + i];
+    uint32_t group = index >> 6;
+    Increment(group, index & 63);
+  }
+}
+
+template <typename ItemType, size_t bits_per_item, bool branchless,
+          typename HashFamily, int k>
+Status SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::
+    AddAll(const vector<ItemType> keys, const size_t start, const size_t end) {
+  int blocks = 1 + arrayLength / blockLen;
+  uint32_t *tmp = new uint32_t[blocks * blockLen];
+  int *tmpLen = new int[blocks]();
+  for (size_t i = start; i < end; i++) {
+    uint64_t key = keys[i];
+    uint64_t hash = hasher(key);
+    uint32_t a = (uint32_t)(hash >> 32);
+    uint32_t b = (uint32_t)hash;
+    for (int j = 0; j < k; j++) {
+      int index = reduce(a, this->arrayLength);
+      int block = index >> blockShift;
+      int len = tmpLen[block];
+      tmp[(block << blockShift) + len] = (index << 6) + (a & 63);
+      tmpLen[block] = len + 1;
+      if (len + 1 == blockLen) {
+        AddBlock(tmp, block, len + 1);
+        tmpLen[block] = 0;
+      }
+      a += b;
+    }
+  }
+  for (int block = 0; block < blocks; block++) {
+    AddBlock(tmp, block, tmpLen[block]);
+  }
+  delete[] tmp;
+  delete[] tmpLen;
   return Ok;
 }
 

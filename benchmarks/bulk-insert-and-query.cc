@@ -511,7 +511,7 @@ struct FilterAPI<SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless
     table->Add(key);
   }
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
-      throw std::runtime_error("Unsupported");
+    table->AddAll(keys, start, end);
   }
   CONTAIN_ATTRIBUTES
   static bool Contain(uint64_t key, const Table * table) {
@@ -748,7 +748,7 @@ int main(int argc, char * argv[]) {
    {41,"Branchless Bloom12 (addall)"},
    {42,"Branchless Bloom16 (addall)"},
    {43,"Branchless Bloom8 (addall)"},
-   {44,"Counting Bloom8"}, {45,"Succinct Counting Bloom8"},
+   {44,"Counting Bloom10 (addall)"}, {45,"Succ Counting Bloom10 (addall)"},
    {70,"SimpleBlockedBloom"}
   };
 #elif defined( __AVX2__)
@@ -764,7 +764,7 @@ int main(int argc, char * argv[]) {
    {41,"Branchless Bloom12 (addall)"},
    {42,"Branchless Bloom16 (addall)"},
    {43,"Branchless Bloom8 (addall)"},
-   {44,"Counting Bloom8"}, {45,"Succinct Counting Bloom8"},
+   {44,"Counting Bloom10 (addall)"}, {45,"Succ Counting Bloom10 (addall)"},
    {63,"BlockedBloom16"}, {64,"BlockedBloom64"},
    {70,"SimpleBlockedBloom"}
   };
@@ -780,7 +780,7 @@ int main(int argc, char * argv[]) {
    {41,"Branchless Bloom12 (addall)"},
    {42,"Branchless Bloom16 (addall)"},
    {43,"Branchless Bloom8 (addall)"},
-   {44,"Counting Bloom8"}, {45,"Succinct Counting Bloom8"},
+   {44,"Counting Bloom10 (addall)"}, {45,"Succ Counting Bloom10 (addall)"},
    {70,"SimpleBlockedBloom"}
   };
 #endif
@@ -1217,15 +1217,15 @@ int main(int argc, char * argv[]) {
 
   if (algorithmId == 44 || algorithmId < 0 || (algos.find(44) != algos.end())) {
       auto cf = FilterBenchmark<
-          CountingBloomFilter<uint64_t, 8, true, SimpleMixSplit>>(
+          CountingBloomFilter<uint64_t, 10, true, SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed);
       cout << setw(NAME_WIDTH) << names[44] << cf << endl;
   }
 
   if (algorithmId == 45 || algorithmId < 0 || (algos.find(45) != algos.end())) {
       auto cf = FilterBenchmark<
-          SuccinctCountingBloomFilter<uint64_t, 8, true, SimpleMixSplit>>(
-          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed);
+          SuccinctCountingBloomFilter<uint64_t, 10, true, SimpleMixSplit>>(
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
       cout << setw(NAME_WIDTH) << names[45] << cf << endl;
   }
 
