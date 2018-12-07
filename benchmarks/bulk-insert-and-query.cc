@@ -145,9 +145,7 @@ struct FilterAPI<CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>> {
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
       throw std::runtime_error("Unsupported");
   }
-
-  CONTAIN_ATTRIBUTES
-  static bool Contain(uint64_t key, const Table * table) {
+  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
   }
 };
@@ -164,7 +162,7 @@ struct FilterAPI<CuckooFilterStable<ItemType, bits_per_item, TableType, HashFami
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
       throw std::runtime_error("Unsupported");
   }
-  static bool Contain(uint64_t key, const Table * table) {
+  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
   }
 };
@@ -184,9 +182,7 @@ struct FilterAPI<SimdBlockFilterFixed<HashFamily>> {
   static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
     throw std::runtime_error("Unsupported");
   }
-
-  CONTAIN_ATTRIBUTES
-  static bool Contain(uint64_t key, const Table * table) {
+  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return table->Find(key);
   }
 };
@@ -207,9 +203,7 @@ struct FilterAPI<SimdBlockFilter<HashFamily>> {
   static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
       throw std::runtime_error("Unsupported");
   }
-
-  CONTAIN_ATTRIBUTES
-  static bool Contain(uint64_t key, const Table * table) {
+  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return table->Find(key);
   }
 };
@@ -227,9 +221,7 @@ struct FilterAPI<SimdBlockFilterFixed64<HashFamily>> {
   static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
      throw std::runtime_error("Unsupported");
   }
-
-  CONTAIN_ATTRIBUTES
-  static bool Contain(uint64_t key, const Table * table) {
+  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return table->Find(key);
   }
 };
@@ -248,9 +240,7 @@ struct FilterAPI<SimdBlockFilterFixed16<HashFamily>> {
   static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
      throw std::runtime_error("Unsupported");
   }
-
-  CONTAIN_ATTRIBUTES
-  static bool Contain(uint64_t key, const Table * table) {
+  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return table->Find(key);
   }
 };
@@ -268,9 +258,7 @@ struct FilterAPI<SimdBlockFilterFixed<HashFamily>> {
   static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
   }
-
-  CONTAIN_ATTRIBUTES
-  static bool Contain(uint64_t key, const Table * table) {
+  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return table->Find(key);
   }
 };
@@ -286,9 +274,7 @@ struct FilterAPI<XorFilter<ItemType, FingerprintType>> {
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
   }
-
-  CONTAIN_ATTRIBUTES
-  static bool Contain(uint64_t key, const Table * table) {
+  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
   }
 };
@@ -307,9 +293,7 @@ struct FilterAPI<SimpleBlockFilter<blocksize,k,HashFamily>> {
   static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
     throw std::runtime_error("Unsupported");
   }
-
-  CONTAIN_ATTRIBUTES
-  static bool Contain(uint64_t key, const Table * table) {
+  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return table->Find(key);
   }
 };
@@ -325,9 +309,7 @@ struct FilterAPI<XorFilter<ItemType, FingerprintType, HashFamily>> {
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
   }
-
-  CONTAIN_ATTRIBUTES
-  static bool Contain(uint64_t key, const Table * table) {
+  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
   }
 };
@@ -342,9 +324,7 @@ struct FilterAPI<XorFilter2<ItemType, FingerprintType, FingerprintStorageType, H
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
   }
-
-  CONTAIN_ATTRIBUTES
-  static bool Contain(uint64_t key, const Table * table) {
+  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
   }
 };
@@ -359,9 +339,7 @@ struct FilterAPI<XorFilter10<ItemType, HashFamily>> {
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
   }
-
-  CONTAIN_ATTRIBUTES
-  static bool Contain(uint64_t key, const Table * table) {
+  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
   }
 };
@@ -376,9 +354,7 @@ struct FilterAPI<XorFilter13<ItemType, HashFamily>> {
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
   }
-
-  CONTAIN_ATTRIBUTES
-  static bool Contain(uint64_t key, const Table * table) {
+  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
   }
 };
@@ -393,9 +369,7 @@ struct FilterAPI<XorFilter10_666<ItemType, HashFamily>> {
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
   }
-
-  CONTAIN_ATTRIBUTES
-  static bool Contain(uint64_t key, const Table * table) {
+  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
   }
 };
@@ -410,9 +384,7 @@ struct FilterAPI<XorFilter2n<ItemType, FingerprintType, FingerprintStorageType, 
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
   }
-
-  CONTAIN_ATTRIBUTES
-  static bool Contain(uint64_t key, const Table * table) {
+  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
   }
 };
@@ -427,9 +399,7 @@ struct FilterAPI<XorFilterPlus<ItemType, FingerprintType, HashFamily>> {
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
   }
-
-  CONTAIN_ATTRIBUTES
-  static bool Contain(uint64_t key, const Table * table) {
+  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
   }
 };
@@ -444,9 +414,7 @@ struct FilterAPI<GcsFilter<ItemType, bits_per_item, HashFamily>> {
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
   }
-
-  CONTAIN_ATTRIBUTES
-  static bool Contain(uint64_t key, const Table * table) {
+  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
   }
 };
@@ -462,9 +430,7 @@ struct FilterAPI<GQFilter<ItemType, bits_per_item, HashFamily>> {
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
       throw std::runtime_error("Unsupported");
   }
-
-  CONTAIN_ATTRIBUTES
-  static bool Contain(uint64_t key, const Table * table) {
+  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
   }
 };
@@ -480,9 +446,7 @@ struct FilterAPI<BloomFilter<ItemType, bits_per_item, branchless, HashFamily>> {
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
   }
-
-  CONTAIN_ATTRIBUTES
-  static bool Contain(uint64_t key, const Table * table) {
+  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
   }
 };
@@ -497,8 +461,7 @@ struct FilterAPI<CountingBloomFilter<ItemType, bits_per_item, branchless, HashFa
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
   }
-  CONTAIN_ATTRIBUTES
-  static bool Contain(uint64_t key, const Table * table) {
+  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
   }
 };
@@ -513,8 +476,7 @@ struct FilterAPI<SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
   }
-  CONTAIN_ATTRIBUTES
-  static bool Contain(uint64_t key, const Table * table) {
+  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
   }
 };
