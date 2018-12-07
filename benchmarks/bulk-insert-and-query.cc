@@ -632,7 +632,7 @@ Statistics FilterBenchmark(
       results[1]*1.0/add_count ,
       results[1]*1.0/results[0],
       results[2]*1.0/add_count,
-       results[3] * 1.0/add_count);
+      results[3]*1.0/add_count);
 #else
    std::cout << "." << std::flush;
 #endif
@@ -735,56 +735,32 @@ void parse_comma_separated(char * c, std::set<int> & answer ) {
 
 
 int main(int argc, char * argv[]) {
+  std::map<int,std::string> names = {
+   {0,"Xor8"},{1,"Xor12"}, {2,"Xor16"},
+   {3,"Cuckoo8"}, {4,"Cuckoo12"}, {5,"Cuckoo16"}, {6,"CuckooSemiSort13" },
+   {7,"Bloom8"}, {8,"Bloom12" }, {9,"Bloom16"},
+   {11,"sort"},
+   {12,"Xor+8"}, {13,"Xor+16"},
+   {14,"GCS"},
+   {22,"Xor10 (NBitArray)"}, {23,"Xor14 (NBitArray)"}, {25,"Xor10"},{26,"Xor10.666"},
+   {37,"Bloom8 (addall)"}, {38,"Bloom12 (addall)"}, {39,"Bloom16 (addall)"},
+   {41,"Branchless Bloom12 (addall)"},
+   {42,"Branchless Bloom16 (addall)"},
+   {43,"Branchless Bloom8 (addall)"},
+   {44,"Counting Bloom10 (addall)"}, {45,"Succ Counting Bloom10 (addall)"},
+   {70,"SimpleBlockedBloom"},
 #ifdef __aarch64__
-  std::map<int,std::string> names = {{0,"Xor8"},{1,"Xor12"},
-   {2,"Xor16"}, {3,"Cuckoo8"}, {4,"Cuckoo12"},
-   {5,"Cuckoo16"}, {6,"CuckooSemiSort13" }, {7,"Bloom8"},
-   {8,"Bloom12" }, {9,"Bloom16"}, {10,"BlockedBloom"},
-   {11,"sort"}, {12,"Xor+8"}, {13,"Xor+16"},
-   {14,"GCS"},  {22, "Xor10 (NBitArray)"}, {23, "Xor14 (NBitArray)"},
-   {25, "Xor10"},{26, "Xor10.666"},
-   {37,"Bloom8 (addall)"}, {38,"Bloom12 (addall)"},
+   {10,"BlockedBloom"},
    {40,"BlockedBloom (addall)"},
-   {41,"Branchless Bloom12 (addall)"},
-   {42,"Branchless Bloom16 (addall)"},
-   {43,"Branchless Bloom8 (addall)"},
-   {44,"Counting Bloom10 (addall)"}, {45,"Succ Counting Bloom10 (addall)"},
-   {70,"SimpleBlockedBloom"}
-  };
 #elif defined( __AVX2__)
-  std::map<int,std::string> names = {{0,"Xor8"},{1,"Xor12"},
-   {2,"Xor16"}, {3,"Cuckoo8"}, {4,"Cuckoo12"},
-   {5,"Cuckoo16"}, {6,"CuckooSemiSort13" }, {7,"Bloom8"},
-   {8,"Bloom12" }, {9,"Bloom16"}, {10,"BlockedBloom"},
-   {11,"sort"}, {12,"Xor+8"}, {13,"Xor+16"},
-   {14,"GCS"}, {15,"CQF"}, {22, "Xor10 (NBitArray)"}, {23, "Xor14 (NBitArray)"},
-   {25, "Xor10"},{26, "Xor10.666"},
-   {37,"Bloom8 (addall)"}, {38,"Bloom12 (addall)"}, {39,"Bloom16 (addall)"},
+   {10,"BlockedBloom"},
+   {15,"CQF"},
    {40,"BlockedBloom (addall)"},
-   {41,"Branchless Bloom12 (addall)"},
-   {42,"Branchless Bloom16 (addall)"},
-   {43,"Branchless Bloom8 (addall)"},
-   {44,"Counting Bloom10 (addall)"}, {45,"Succ Counting Bloom10 (addall)"},
    {63,"BlockedBloom16"}, {64,"BlockedBloom64"},
-   {70,"SimpleBlockedBloom"}
-  };
-#else
-  std::map<int,std::string> names = {{0,"Xor8"},{1,"Xor12"},
-   {2,"Xor16"}, {3,"Cuckoo8"}, {4,"Cuckoo12"},
-   {5,"Cuckoo16"}, {6,"CuckooSemiSort13" }, {7,"Bloom8"},
-   {8,"Bloom12" }, {9,"Bloom16"},
-   {11,"sort"}, {12,"Xor+8"}, {13,"Xor+16"},
-   {14,"GCS"}, {22, "Xor10 (NBitArray)"}, {23, "Xor14 (NBitArray)"},
-   {25, "Xor10"},{26, "Xor10.666"},
-   {37,"Bloom8 (addall)"}, {38,"Bloom12 (addall)"}, {39,"Bloom16 (addall)"},
-   {41,"Branchless Bloom12 (addall)"},
-   {42,"Branchless Bloom16 (addall)"},
-   {43,"Branchless Bloom8 (addall)"},
-   {44,"Counting Bloom10 (addall)"}, {45,"Succ Counting Bloom10 (addall)"},
-   {70,"SimpleBlockedBloom"}
-  };
 #endif
+  };
 
+  // Parameter Parsing ----------------------------------------------------------
 
   if (argc < 2) {
     cout << "Usage: " << argv[0] << " <numberOfEntries> [<algorithmId> [<seed>]]" << endl;
@@ -843,6 +819,9 @@ int main(int argc, char * argv[]) {
   if (actual_sample_size > add_count) {
     actual_sample_size = add_count;
   }
+
+  // Generating Samples ----------------------------------------------------------
+
   vector<uint64_t> to_add = seed == -1 ?
       GenerateRandom64Fast(add_count, rand()) :
       GenerateRandom64Fast(add_count, seed);
@@ -894,7 +873,6 @@ int main(int argc, char * argv[]) {
     hasduplicates = true;
   }
 
-
   if (actual_sample_size > to_lookup.size()) {
     std::cerr << "actual_sample_size = "<< actual_sample_size << std::endl;
     throw out_of_range("to_lookup must contain at least actual_sample_size values");
@@ -923,11 +901,12 @@ int main(int argc, char * argv[]) {
     }
     mixed_sets.push_back(thisone);
     std::cout << "\r                                                                                         \r"  << std::flush;
-
   }
   constexpr int NAME_WIDTH = 32;
-
   cout << StatisticsTableHeader(NAME_WIDTH, 5) << endl;
+
+  // Algorithms ----------------------------------------------------------
+
   if (algorithmId == 0 || algorithmId < 0 || (algos.find(0) != algos.end())) {
       auto cf = FilterBenchmark<
           XorFilter<uint64_t, uint8_t, SimpleMixSplit>>(
