@@ -87,6 +87,7 @@ public:
   ~CountingBloomFilter() { delete[] data; }
   Status Add(const ItemType &item);
   Status AddAll(const vector<ItemType> data, const size_t start, const size_t end);
+  Status Remove(const ItemType &item);
   Status Contain(const ItemType &item) const;
   size_t SizeInBytes() const { return arrayLength * 8; }
 };
@@ -152,6 +153,22 @@ Status CountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::
 template <typename ItemType, size_t bits_per_item, bool branchless,
           typename HashFamily, int k>
 Status CountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::
+    Remove(const ItemType &key) {
+  uint64_t hash = hasher(key);
+  uint32_t a = (uint32_t)(hash >> 32);
+  uint32_t b = (uint32_t)hash;
+  for (int i = 0; i < k; i++) {
+    uint index = reduce(a, this->arrayLength);
+    data[index] -= 1ULL << ((a << 2) & 0x3f);
+    a += b;
+  }
+  return Ok;
+}
+
+
+template <typename ItemType, size_t bits_per_item, bool branchless,
+          typename HashFamily, int k>
+Status CountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::
     Contain(const ItemType &key) const {
   uint64_t hash = hasher(key);
   uint32_t a = (uint32_t)(hash >> 32);
@@ -168,6 +185,8 @@ Status CountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::
 
 // --------------------------------------------------------------------------------------
 
+// #define VERIFY_COUNT
+
 template <typename ItemType, size_t bits_per_item, bool branchless,
           typename HashFamily = TwoIndependentMultiplyShift,
           int k = (int)((double)bits_per_item * 0.693147180559945 + 0.5)>
@@ -176,7 +195,9 @@ class SuccinctCountingBloomFilter {
   uint64_t *data;
   uint64_t *counts;
   uint64_t *overflow;
-  // uint8_t *realCount;
+#ifdef VERIFY_COUNT
+  uint8_t *realCount;
+#endif
   size_t arrayLength;
   size_t overflowLength;
   size_t nextFreeOverflow;
@@ -185,6 +206,7 @@ class SuccinctCountingBloomFilter {
   const int blockLen = 1 << blockShift;
 
   void Increment(size_t group, int bit);
+  void Decrement(size_t group, int bit);
   int ReadCount(size_t group, int bit);
   void AddBlock(uint32_t *tmp, int block, int len);
 
@@ -196,7 +218,9 @@ public:
     data = new uint64_t[arrayLength]();
     counts = new uint64_t[arrayLength]();
     overflow = new uint64_t[overflowLength]();
-    // realCount = new uint8_t[arrayLength * 64]();
+#ifdef VERIFY_COUNT
+    realCount = new uint8_t[arrayLength * 64]();
+#endif
     nextFreeOverflow = 0;
     for (size_t i = 0; i < overflowLength; i += 4) {
         overflow[i] = i + 4;
@@ -205,6 +229,7 @@ public:
   ~SuccinctCountingBloomFilter() { delete[] data; delete[] counts; delete[] overflow; }
   Status Add(const ItemType &item);
   Status AddAll(const vector<ItemType> data, const size_t start, const size_t end);
+  Status Remove(const ItemType &item);
   Status Contain(const ItemType &item) const;
   size_t SizeInBytes() const { return arrayLength * 8 * 2 + overflowLength * 8; }
 };
@@ -233,6 +258,21 @@ void SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily
     uint32_t group = index >> 6;
     Increment(group, index & 63);
   }
+}
+
+template <typename ItemType, size_t bits_per_item, bool branchless,
+          typename HashFamily, int k>
+Status SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::
+    Remove(const ItemType &key) {
+  uint64_t hash = hasher(key);
+  uint32_t a = (uint32_t)(hash >> 32);
+  uint32_t b = (uint32_t)hash;
+  for (int i = 0; i < k; i++) {
+    uint group = reduce(a, this->arrayLength);
+    Decrement(group, a & 63);
+    a += b;
+  }
+  return Ok;
 }
 
 template <typename ItemType, size_t bits_per_item, bool branchless,
@@ -272,13 +312,15 @@ template <typename ItemType, size_t bits_per_item, bool branchless,
           typename HashFamily, int k>
 void SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::
     Increment(size_t group, int bit) {
-    // realCount[(group << 6) + bit]++;
+#ifdef VERIFY_COUNT
+    realCount[(group << 6) + bit]++;
+#endif
     uint64_t m = data[group];
     uint64_t c = counts[group];
-    if ((c & 0xc000000000000000L) != 0) {
+    if ((c & 0xc000000000000000ULL) != 0) {
         // an overflow entry, or overflowing now
         size_t index;
-        if ((c & 0x8000000000000000L) == 0) {
+        if ((c & 0x8000000000000000ULL) == 0) {
             // convert to an overflow entry
             // allocate overflow
             index = nextFreeOverflow;
@@ -298,28 +340,35 @@ void SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily
                 overflow[index + i / 16] += n * (1ULL << (i * 4));
             }
             uint64_t count = 64;
-            c = 0x8000000000000000L | (count << 32) | index;
+            c = 0x8000000000000000ULL | (count << 32) | index;
             counts[group] = c;
         } else {
             // already
-            index = (size_t) (c & 0x0fffffff);
+            index = (size_t) (c & 0x0fffffffULL);
             c += 1ULL << 32;
             counts[group] = c;
         }
         overflow[index + bit / 16] += (1ULL << (bit * 4));
         data[group] |= 1ULL << bit;
-        return;
+    } else {
+        data[group] |= 1ULL << bit;
+        int bitsBefore = bitCount64(m & (0xffffffffffffffffULL >> (63 - bit)));
+        int before = select64((c << 1) | 1, bitsBefore);
+        int d = (m >> bit) & 1;
+        int insertAt = before - d;
+        uint64_t mask = (1ULL << insertAt) - 1;
+        uint64_t left = c & ~mask;
+        uint64_t right = c & mask;
+        c = (left << 1) | ((1ULL ^ d) << insertAt) | right;
+        counts[group] = c;
     }
-    data[group] |= 1ULL << bit;
-    int bitsBefore = bitCount64(m & (0xffffffffffffffffL >> (63 - bit)));
-    int before = select64((c << 1) | 1, bitsBefore);
-    int d = (m >> bit) & 1;
-    int insertAt = before - d;
-    uint64_t mask = (1ULL << insertAt) - 1;
-    uint64_t left = c & ~mask;
-    uint64_t right = c & mask;
-    c = (left << 1) | ((1ULL ^ d) << insertAt) | right;
-    counts[group] = c;
+#ifdef VERIFY_COUNT
+    for(int b = 0; b < 64; b++) {
+        if (realCount[(group << 6) + b] != ReadCount(group, b)) {
+            ::std::cout << "group " << group << "/" << b << " of " << bit << "\n";
+        }
+    }
+#endif
 }
 
 template <typename ItemType, size_t bits_per_item, bool branchless,
@@ -332,16 +381,73 @@ int SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily,
         return 0;
     }
     uint64_t c = counts[group];
-    if ((c & 0x8000000000000000L) != 0) {
-        size_t index = (size_t) (c & 0x0fffffff);
+    if ((c & 0x8000000000000000ULL) != 0) {
+        size_t index = (size_t) (c & 0x0fffffffULL);
         uint64_t n = overflow[index + bit / 16];
         n >>= 4 * (bit & 0xf);
         return (int) (n & 15);
     }
-    int bitsBefore = bitCount64(m & (0xffffffffffffffffL >> (63 - bit)));
+    int bitsBefore = bitCount64(m & (0xffffffffffffffffULL >> (63 - bit)));
     int bitPos = select64(c, bitsBefore - 1);
     uint64_t y = ((c << (63 - bitPos)) << 1) | (1ULL << (63 - bitPos));
     return numberOfLeadingZeros64(y) + 1;
+}
+
+template <typename ItemType, size_t bits_per_item, bool branchless,
+          typename HashFamily, int k>
+void SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::
+    Decrement(size_t group, int bit) {
+#ifdef VERIFY_COUNT
+    realCount[(group << 6) + bit]--;
+#endif
+    uint64_t m = data[group];
+    uint64_t c = counts[group];
+    if ((c & 0x8000000000000000ULL) != 0) {
+        // an overflow entry
+        size_t index = (size_t) (c & 0x0fffffffULL);
+        size_t count = (size_t) (c >> 32) & 0x0fffffffULL;
+        c -= 1ULL << 32;
+        counts[group] = c;
+        uint64_t n = overflow[index + bit / 16];
+        overflow[index + bit / 16] = n - (1ULL << (bit * 4));
+        n >>= 4 * (bit & 0xf);
+        if ((n & 0xf) == 1) {
+            data[group] &= ~(1ULL << bit);
+        }
+        if (count < 64) {
+            // convert back to an inline entry, and free up the overflow entry
+            uint64_t c2 = 0;
+            for (int j = 63; j >= 0; j--) {
+                int cj = (int) ((overflow[index + j / 16] >> (4 * j)) & 0xf);
+                if (cj > 0) {
+                    c2 = ((c2 << 1) | 1) << (cj - 1);
+                }
+            }
+            counts[group] = c2;
+            // free overflow
+            overflow[index] = nextFreeOverflow;
+            nextFreeOverflow = index;
+        }
+    } else {
+        int bitsBefore = bitCount64(m & (0xffffffffffffffffULL >> (63 - bit)));
+        int before = select64((c << 1) | 1, bitsBefore) - 1;
+        int removeAt = max(0, before - 1);
+        // remove the bit from the counter
+        uint64_t mask = (1ULL << removeAt) - 1;
+        uint64_t left = (c >> 1) & ~mask;
+        uint64_t right= c & mask;
+        counts[group] = left | right;
+        uint64_t removed = (c >> removeAt) & 1;
+        // possibly reset the data bit
+        data[group] = m & ~(removed << bit);
+    }
+#ifdef VERIFY_COUNT
+    for(int b = 0; b < 64; b++) {
+        if (realCount[(group << 6) + b] != ReadCount(group, b)) {
+            ::std::cout << "group- " << group << "/" << b << " of " << bit << "\n";
+        }
+    }
+#endif
 }
 
 template <typename ItemType, size_t bits_per_item, bool branchless,

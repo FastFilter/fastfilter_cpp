@@ -63,6 +63,7 @@ const size_t MAX_SAMPLE_SIZE = 10 * 1000 * 1000;
 struct Statistics {
   size_t add_count;
   double nanos_per_add;
+  double nanos_per_remove;
   map<int, double> nanos_per_finds; // The key is the percent of queries that were expected
                                    // to be positive
   double false_positive_probabilty;
@@ -87,7 +88,8 @@ string StatisticsTableHeader(int type_width, int find_percent_count) {
   ostringstream os;
 
   os << string(type_width, ' ');
-  os << setw(12) << right << "";
+  os << setw(10) << right << "";
+  os << setw(10) << right << "";
   for (int i = 0; i < find_percent_count; ++i) {
     os << setw(8) << "find";
   }
@@ -95,7 +97,8 @@ string StatisticsTableHeader(int type_width, int find_percent_count) {
      << "optimal" << setw(8) << "wasted" << setw(8) << "million" << endl;
 
   os << string(type_width, ' ');
-  os << setw(12) << right << "ns/add";
+  os << setw(10) << right << "ns/add";
+  os << setw(10) << right << "ns/rem";
   for (int i = 0; i < find_percent_count; ++i) {
     os << setw(7)
        << static_cast<int>(100 * i / static_cast<double>(find_percent_count - 1)) << '%';
@@ -109,8 +112,10 @@ string StatisticsTableHeader(int type_width, int find_percent_count) {
 template <class CharT, class Traits>
 basic_ostream<CharT, Traits>& operator<<(
     basic_ostream<CharT, Traits>& os, const Statistics& stats) {
-  os << fixed << setprecision(2) << setw(12) << right
+  os << fixed << setprecision(2) << setw(10) << right
      << stats.nanos_per_add;
+  os << fixed << setprecision(2) << setw(10) << right
+     << stats.nanos_per_remove;
   for (const auto& fps : stats.nanos_per_finds) {
     os << setw(8) << fps.second;
   }
@@ -145,6 +150,9 @@ struct FilterAPI<CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>> {
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
       throw std::runtime_error("Unsupported");
   }
+  static void Remove(uint64_t key, Table * table) {
+    table->Delete(key);
+  }
   CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
   }
@@ -161,6 +169,9 @@ struct FilterAPI<CuckooFilterStable<ItemType, bits_per_item, TableType, HashFami
   }
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
       throw std::runtime_error("Unsupported");
+  }
+  static void Remove(uint64_t key, Table * table) {
+    table->Delete(key);
   }
   CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
@@ -180,6 +191,9 @@ struct FilterAPI<SimdBlockFilterFixed<HashFamily>> {
     table->Add(key);
   }
   static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
+    throw std::runtime_error("Unsupported");
+  }
+  static void Remove(uint64_t key, Table * table) {
     throw std::runtime_error("Unsupported");
   }
   CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
@@ -203,6 +217,9 @@ struct FilterAPI<SimdBlockFilter<HashFamily>> {
   static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
       throw std::runtime_error("Unsupported");
   }
+  static void Remove(uint64_t key, Table * table) {
+    throw std::runtime_error("Unsupported");
+  }
   CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return table->Find(key);
   }
@@ -220,6 +237,9 @@ struct FilterAPI<SimdBlockFilterFixed64<HashFamily>> {
   }
   static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
      throw std::runtime_error("Unsupported");
+  }
+  static void Remove(uint64_t key, Table * table) {
+    throw std::runtime_error("Unsupported");
   }
   CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return table->Find(key);
@@ -240,6 +260,9 @@ struct FilterAPI<SimdBlockFilterFixed16<HashFamily>> {
   static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
      throw std::runtime_error("Unsupported");
   }
+  static void Remove(uint64_t key, Table * table) {
+    throw std::runtime_error("Unsupported");
+  }
   CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return table->Find(key);
   }
@@ -258,6 +281,9 @@ struct FilterAPI<SimdBlockFilterFixed<HashFamily>> {
   static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
   }
+  static void Remove(uint64_t key, Table * table) {
+    throw std::runtime_error("Unsupported");
+  }
   CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return table->Find(key);
   }
@@ -274,11 +300,13 @@ struct FilterAPI<XorFilter<ItemType, FingerprintType>> {
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
   }
+  static void Remove(uint64_t key, Table * table) {
+    throw std::runtime_error("Unsupported");
+  }
   CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
   }
 };
-
 
 template<size_t blocksize, int k, typename HashFamily>
 struct FilterAPI<SimpleBlockFilter<blocksize,k,HashFamily>> {
@@ -291,6 +319,9 @@ struct FilterAPI<SimpleBlockFilter<blocksize,k,HashFamily>> {
     table->Add(key);
   }
   static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
+    throw std::runtime_error("Unsupported");
+  }
+  static void Remove(uint64_t key, Table * table) {
     throw std::runtime_error("Unsupported");
   }
   CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
@@ -309,6 +340,9 @@ struct FilterAPI<XorFilter<ItemType, FingerprintType, HashFamily>> {
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
   }
+  static void Remove(uint64_t key, Table * table) {
+    throw std::runtime_error("Unsupported");
+  }
   CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
   }
@@ -323,6 +357,9 @@ struct FilterAPI<XorFilter2<ItemType, FingerprintType, FingerprintStorageType, H
   }
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
+  }
+  static void Remove(uint64_t key, Table * table) {
+    throw std::runtime_error("Unsupported");
   }
   CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
@@ -339,6 +376,9 @@ struct FilterAPI<XorFilter10<ItemType, HashFamily>> {
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
   }
+  static void Remove(uint64_t key, Table * table) {
+    throw std::runtime_error("Unsupported");
+  }
   CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
   }
@@ -353,6 +393,9 @@ struct FilterAPI<XorFilter13<ItemType, HashFamily>> {
   }
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
+  }
+  static void Remove(uint64_t key, Table * table) {
+    throw std::runtime_error("Unsupported");
   }
   CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
@@ -369,6 +412,9 @@ struct FilterAPI<XorFilter10_666<ItemType, HashFamily>> {
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
   }
+  static void Remove(uint64_t key, Table * table) {
+    throw std::runtime_error("Unsupported");
+  }
   CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
   }
@@ -383,6 +429,9 @@ struct FilterAPI<XorFilter2n<ItemType, FingerprintType, FingerprintStorageType, 
   }
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
+  }
+  static void Remove(uint64_t key, Table * table) {
+    throw std::runtime_error("Unsupported");
   }
   CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
@@ -399,6 +448,9 @@ struct FilterAPI<XorFilterPlus<ItemType, FingerprintType, HashFamily>> {
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
   }
+  static void Remove(uint64_t key, Table * table) {
+    throw std::runtime_error("Unsupported");
+  }
   CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
   }
@@ -413,6 +465,9 @@ struct FilterAPI<GcsFilter<ItemType, bits_per_item, HashFamily>> {
   }
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
+  }
+  static void Remove(uint64_t key, Table * table) {
+    throw std::runtime_error("Unsupported");
   }
   CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
@@ -430,6 +485,9 @@ struct FilterAPI<GQFilter<ItemType, bits_per_item, HashFamily>> {
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
       throw std::runtime_error("Unsupported");
   }
+  static void Remove(uint64_t key, Table * table) {
+    table->Remove(key);
+  }
   CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
   }
@@ -446,6 +504,9 @@ struct FilterAPI<BloomFilter<ItemType, bits_per_item, branchless, HashFamily>> {
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
   }
+  static void Remove(uint64_t key, Table * table) {
+    throw std::runtime_error("Unsupported");
+  }
   CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
   }
@@ -461,6 +522,9 @@ struct FilterAPI<CountingBloomFilter<ItemType, bits_per_item, branchless, HashFa
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
   }
+  static void Remove(uint64_t key, Table * table) {
+    table->Remove(key);
+  }
   CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
   }
@@ -475,6 +539,9 @@ struct FilterAPI<SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless
   }
   static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
     table->AddAll(keys, start, end);
+  }
+  static void Remove(uint64_t key, Table * table) {
+    table->Remove(key);
   }
   CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
@@ -543,7 +610,7 @@ template <typename Table>
 Statistics FilterBenchmark(
     size_t add_count, const vector<uint64_t>& to_add, size_t distinct_add, const vector<uint64_t>& to_lookup, size_t distinct_lookup,
     size_t intersectionsize, bool hasduplicates,
-    const std::vector<samples_t> & mixed_sets, int seed, bool batchedadd = false) {
+    const std::vector<samples_t> & mixed_sets, int seed, bool batchedadd = false, bool remove = false) {
   if (add_count > to_add.size()) {
     throw out_of_range("to_add must contain at least add_count values");
   }
@@ -567,37 +634,38 @@ Statistics FilterBenchmark(
 #endif
 
   // Add values until failure or until we run out of values to add:
-  auto start_time = NowNanos();
   if(batchedadd) {
     std::cout << "batched add" << std::flush;
-    // for the XorFilter
-    FilterAPI<Table>::AddAll(to_add, 0, add_count, &filter);
   } else {
     std::cout << "1-by-1 add" << std::flush;
+  }
+  auto start_time = NowNanos();
+  if(batchedadd) {
+    FilterAPI<Table>::AddAll(to_add, 0, add_count, &filter);
+  } else {
     for (size_t added = 0; added < add_count; ++added) {
       FilterAPI<Table>::Add(to_add[added], &filter);
     }
   }
+  auto time = NowNanos() - start_time;
   std::cout << "\r             \r" << std::flush;
+#ifdef __linux__
+  unified.end(results);
+  printf("add    ");
+  printf("cycles: %5.1f/key, instructions: (%5.1f/key, %4.2f/cycle) cache misses: %5.2f/key branch misses: %4.2f/key\n",
+    results[0]*1.0/add_count,
+    results[1]*1.0/add_count ,
+    results[1]*1.0/results[0],
+    results[2]*1.0/add_count,
+    results[3]*1.0/add_count);
+#else
+  std::cout << "." << std::flush;
+#endif
 
   // sanity check:
   for (size_t added = 0; added < add_count; ++added) {
     assert(FilterAPI<Table>::Contain(to_add[added], &filter) == 1);
   }
-  auto time = NowNanos() - start_time;
-
-#ifdef __linux__
-    unified.end(results);
-    printf("adds   ");
-    printf("cycles: %5.1f/key, instructions: (%5.1f/key, %4.2f/cycle) cache misses: %5.2f/key branch misses: %4.2f/key\n",
-      results[0]*1.0/add_count,
-      results[1]*1.0/add_count ,
-      results[1]*1.0/results[0],
-      results[2]*1.0/add_count,
-      results[3]*1.0/add_count);
-#else
-   std::cout << "." << std::flush;
-#endif
 
   result.add_count = add_count;
   result.nanos_per_add = static_cast<double>(time) / add_count;
@@ -612,7 +680,7 @@ Statistics FilterBenchmark(
 #ifdef __linux__
     unified.start();
 #else
-   std::cout << "-" << std::flush;
+    std::cout << "-" << std::flush;
 #endif
     const auto start_time = NowNanos();
     found_count = 0;
@@ -630,7 +698,7 @@ Statistics FilterBenchmark(
       results[2]*1.0/to_lookup_mixed.size(),
       results[3] * 1.0/to_lookup_mixed.size());
 #else
-   std::cout << "." << std::flush;
+    std::cout << "." << std::flush;
 #endif
 
     if (found_count < true_match) {
@@ -653,9 +721,40 @@ Statistics FilterBenchmark(
       result.false_positive_probabilty = (found_count  - intersectionsize) / static_cast<double>(to_lookup_mixed.size() - intersectionsize);
     }
   }
-#ifndef __linux__
-  std::cout <<"\r"; // roll back the line
+
+  // Remove
+  result.nanos_per_remove = 0;
+  if (remove) {
+    std::cout << "1-by-1 remove" << std::flush;
+#ifdef __linux__
+    unified.start();
+#else
+    std::cout << "-" << std::flush;
 #endif
+    start_time = NowNanos();
+    for (size_t added = 0; added < add_count; ++added) {
+      FilterAPI<Table>::Remove(to_add[added], &filter);
+    }
+    time = NowNanos() - start_time;
+    result.nanos_per_remove = static_cast<double>(time) / add_count;
+#ifdef __linux__
+    unified.end(results);
+    printf("remove ");
+    printf("cycles: %5.1f/key, instructions: (%5.1f/key, %4.2f/cycle) cache misses: %5.2f/key branch misses: %4.2f/key\n",
+      results[0]*1.0/add_count,
+      results[1]*1.0/add_count ,
+      results[1]*1.0/results[0],
+      results[2]*1.0/add_count,
+      results[3]*1.0/add_count);
+#else
+    std::cout << "." << std::flush;
+#endif
+  }
+
+#ifndef __linux__
+  std::cout << "\r             \r" << std::flush;
+#endif
+
   return result;
 }
 
@@ -893,28 +992,28 @@ int main(int argc, char * argv[]) {
   if (algorithmId == 3 || algorithmId < 0 || (algos.find(3) != algos.end())) {
       auto cf = FilterBenchmark<
           CuckooFilterStable<uint64_t, 8, SingleTable, SimpleMixSplit>>(
-          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed);
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, false, true);
       cout << setw(NAME_WIDTH) << names[3]<< cf << endl;
   }
 
   if (algorithmId == 4 || algorithmId < 0 || (algos.find(4) != algos.end())) {
       auto cf = FilterBenchmark<
           CuckooFilterStable<uint64_t, 12, SingleTable, SimpleMixSplit>>(
-          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed);
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, false, true);
       cout << setw(NAME_WIDTH) << names[4] << cf << endl;
   }
 
   if (algorithmId == 5 || algorithmId < 0 || (algos.find(5) != algos.end())) {
       auto cf = FilterBenchmark<
           CuckooFilterStable<uint64_t, 16, SingleTable, SimpleMixSplit>>(
-          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed);
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, false, true);
       cout << setw(NAME_WIDTH) << names[5] << cf << endl;
   }
 
   if (algorithmId == 6 || algorithmId < 0 || (algos.find(6) != algos.end())) {
       auto cf = FilterBenchmark<
           CuckooFilterStable<uint64_t, 13, PackedTable, SimpleMixSplit>>(
-          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed);
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, false, true);
       cout << setw(NAME_WIDTH) << names[6] << cf << endl;
   }
 
@@ -998,7 +1097,7 @@ int main(int argc, char * argv[]) {
   if (algorithmId == 15 || algorithmId < 0 || (algos.find(15) != algos.end())) {
       auto cf = FilterBenchmark<
           GQFilter<uint64_t, 8, SimpleMixSplit>>(
-          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed);
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, false, true);
       cout << setw(NAME_WIDTH) << names[15] << cf << endl;
   }
 #endif
@@ -1159,14 +1258,14 @@ int main(int argc, char * argv[]) {
   if (algorithmId == 44 || algorithmId < 0 || (algos.find(44) != algos.end())) {
       auto cf = FilterBenchmark<
           CountingBloomFilter<uint64_t, 10, true, SimpleMixSplit>>(
-          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true, true);
       cout << setw(NAME_WIDTH) << names[44] << cf << endl;
   }
 
   if (algorithmId == 45 || algorithmId < 0 || (algos.find(45) != algos.end())) {
       auto cf = FilterBenchmark<
           SuccinctCountingBloomFilter<uint64_t, 10, true, SimpleMixSplit>>(
-          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true, true);
       cout << setw(NAME_WIDTH) << names[45] << cf << endl;
   }
 

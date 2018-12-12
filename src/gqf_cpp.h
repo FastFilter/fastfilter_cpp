@@ -72,6 +72,9 @@ class GQFilter {
   // Add an item to the filter.
   Status Add(const ItemType &item);
 
+  // Delete an key from the filter
+  Status Remove(const ItemType &item);
+
   // Report if the item is inserted, with false positive rate.
   Status Contain(const ItemType &item) const;
 
@@ -94,6 +97,28 @@ Status GQFilter<ItemType, bits_per_item, HashFamily>::Add(
     // uint64_t hash = key;
     // int ret = qf_insert(&qf, hash & mask, 0, 1, QF_NO_LOCK | QF_KEY_IS_HASH);
     int ret = qf_insert(&qf, hash & mask, 0, 1, QF_NO_LOCK);
+    if (ret < 0) {
+        std::cout << "failed insertion for key.\n";
+        if (ret == QF_NO_SPACE) {
+            std::cout << "CQF is full.\n";
+        } else if (ret == QF_COULDNT_LOCK) {
+            std::cout << "TRY_ONCE_LOCK failed.\n";
+        } else {
+            std::cout << "Does not recognise return value.\n";
+        }
+        abort();
+    }
+    return Ok;
+}
+
+template <typename ItemType, size_t bits_per_item,
+    typename HashFamily>
+Status GQFilter<ItemType, bits_per_item, HashFamily>::Remove(
+    const ItemType &key) {
+    uint64_t hash = hasher(key);
+    // uint64_t hash = key;
+    // int ret = qf_insert(&qf, hash & mask, 0, 1, QF_NO_LOCK | QF_KEY_IS_HASH);
+    int ret = qf_remove(&qf, hash & mask, 0, 1, QF_NO_LOCK);
     if (ret < 0) {
         std::cout << "failed insertion for key.\n";
         if (ret == QF_NO_SPACE) {
