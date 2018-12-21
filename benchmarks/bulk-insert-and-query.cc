@@ -547,6 +547,25 @@ struct FilterAPI<SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless
   }
 };
 
+template <typename ItemType, size_t bits_per_item, typename HashFamily>
+struct FilterAPI<SuccinctCountingBlockedBloomFilter<ItemType, bits_per_item, HashFamily>> {
+  using Table = SuccinctCountingBlockedBloomFilter<ItemType, bits_per_item, HashFamily>;
+  static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
+  static void Add(uint64_t key, Table* table) {
+    table->Add(key);
+  }
+  static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
+    throw std::runtime_error("Unsupported");
+    // table->AddAll(keys, start, end);
+  }
+  static void Remove(uint64_t key, Table * table) {
+    table->Remove(key);
+  }
+  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
+    return table->Contain(key);
+  }
+};
+
 // assuming that first1,last1 and first2, last2 are sorted,
 // this tries to find out how many of first1,last1 can be
 // found in first2, last2, this includes duplicates
@@ -822,6 +841,7 @@ int main(int argc, char * argv[]) {
     // Counting Bloom
     {60, "CountingBloom10 (addall)"},
     {61, "SuccCountingBloom10 (addall)"},
+    {62, "SuccCountBlockBloom10"},
     // Sort
     {100, "Sort"},
   };
@@ -1261,6 +1281,13 @@ int main(int argc, char * argv[]) {
       auto cf = FilterBenchmark<
           SuccinctCountingBloomFilter<uint64_t, 10, true, SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true, true);
+      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
+  }
+  a = 62;
+  if (algorithmId == a || algorithmId < 0 || (algos.find(a) != algos.end())) {
+      auto cf = FilterBenchmark<
+          SuccinctCountingBlockedBloomFilter<uint64_t, 10, SimpleMixSplit>>(
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, false, true);
       cout << setw(NAME_WIDTH) << names[a] << cf << endl;
   }
 
