@@ -33,6 +33,7 @@ template <typename ItemType, size_t bits_per_item, bool branchless,
           typename HashFamily = TwoIndependentMultiplyShift,
           int k = (int)((double)bits_per_item * 0.693147180559945 + 0.5)>
 class BloomFilter {
+public:
 
   uint64_t *data;
   size_t size;
@@ -43,7 +44,6 @@ class BloomFilter {
 
   double BitsPerItem() const { return k; }
 
-public:
   explicit BloomFilter(const size_t n) : hasher() {
     this->size = 0;
     this->kk = getBestK(bits_per_item);
