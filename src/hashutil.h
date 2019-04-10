@@ -33,9 +33,9 @@ class TwoIndependentMultiplyShift {
 };
 
 class SimpleMixSplit {
-  uint64_t seed;
 
  public:
+  uint64_t seed;
   SimpleMixSplit() {
     ::std::random_device random;
     seed = random();
