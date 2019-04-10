@@ -193,7 +193,10 @@ class XorFilterPlus {
     }
   }
 
-  Status AddAll(const vector<ItemType> data, const size_t start, const size_t end);
+  Status AddAll(const vector<ItemType>& data, const size_t start, const size_t end) {
+      return AddAll(data.data(), start, end);
+  }
+  Status AddAll(const ItemType * data, const size_t start, const size_t end);
 
   // Report if the item is inserted, with false positive rate.
   Status Contain(const ItemType &item) const;
@@ -212,7 +215,7 @@ class XorFilterPlus {
 template <typename ItemType, typename FingerprintType,
           typename HashFamily>
 Status XorFilterPlus<ItemType, FingerprintType, HashFamily>::AddAll(
-    const vector<ItemType> keys, const size_t start, const size_t end) {
+    const ItemType* keys, const size_t start, const size_t end) {
     int m = arrayLength;
     uint64_t* reverseOrder = new uint64_t[size];
     uint8_t* reverseH = new uint8_t[size];

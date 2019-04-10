@@ -60,8 +60,12 @@ public:
 
   // Add multiple items to the filter.
   Status AddAll(const vector<ItemType> data, const size_t start,
-                const size_t end);
+                const size_t end) {
+    return AddAll(data.data(),start,end);
 
+  }
+  Status AddAll(const ItemType* data, const size_t start,
+                const size_t end);
   // Report if the item is inserted, with false positive rate.
   Status Contain(const ItemType &item) const;
 
@@ -107,7 +111,7 @@ void applyBlock(uint32_t *tmp, int block, int len, uint64_t *data) {
 template <typename ItemType, size_t bits_per_item, bool branchless,
           typename HashFamily, int k>
 Status BloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::AddAll(
-    const vector<ItemType> keys, const size_t start, const size_t end) {
+    const ItemType* keys, const size_t start, const size_t end) {
   int blocks = 1 + arrayLength / blockLen;
   uint32_t *tmp = new uint32_t[blocks * blockLen];
   int *tmpLen = new int[blocks]();

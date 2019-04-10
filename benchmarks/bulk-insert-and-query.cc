@@ -1242,7 +1242,7 @@ int main(int argc, char * argv[]) {
 #ifdef __AVX2__
   a = 51;
   if (algorithmId == a || algorithmId < 0 || (algos.find(a) != algos.end())) {
-      auto cf = FilterBenchmark<SimdBlockFilter<SimpleMixSplit>>(
+      auto cf = FilterBenchmark<SimdBlockFilterFixed<SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed);
       cout << setw(NAME_WIDTH) << names[a] << cf << endl;
   }
