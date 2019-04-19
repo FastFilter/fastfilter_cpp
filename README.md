@@ -1,6 +1,8 @@
 # fastfilter_cpp
 Fast Filter: Fast approximate membership filter implementations (C++)
 
+This is a research library, developers might want to consider our [Header-only Xor Filter library in C](https://github.com/FastFilter/xor_singleheader/).
+
 ## Prerequisites
 
 - A  C++11 compiler such as GNU G++ or LLVM Clang++
