@@ -1,7 +1,10 @@
 # fastfilter_cpp
+
 Fast Filter: Fast approximate membership filter implementations (C++)
 
-This is a research library, developers might want to consider our [Header-only Xor Filter library in C](https://github.com/FastFilter/xor_singleheader/).
+This is a research library currently. Some of the source code is not fully tested, and not well documented. 
+
+Developers might want to consider our [Header-only Xor Filter library in C](https://github.com/FastFilter/xor_singleheader/).
 
 ## Prerequisites
 
