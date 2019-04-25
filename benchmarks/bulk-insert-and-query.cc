@@ -19,6 +19,10 @@
 #include <set>
 #include <stdio.h>
 
+// morton
+#include "compressed_cuckoo_filter.h"
+#include "morton_sample_configs.h"
+
 #include "cuckoofilter.h"
 #include "cuckoofilter_stable.h"
 #include "xorfilter.h"
@@ -53,6 +57,7 @@ using namespace xorfilter_plus;
 using namespace bloomfilter;
 using namespace counting_bloomfilter;
 using namespace gcsfilter;
+using namespace CompressedCuckoo; // Morton filter namespace
 #ifdef __AVX2__
 using namespace gqfilter;
 #endif
@@ -308,6 +313,52 @@ struct FilterAPI<XorFilter<ItemType, FingerprintType>> {
   }
 };
 
+class MortonFilter {
+    Morton3_8* filter;
+    size_t size;
+public:
+    MortonFilter(const size_t size) {
+        filter = new Morton3_8((size_t) (2.1 * size) + 64);
+        this->size = size;
+    }
+    ~MortonFilter() {
+        delete filter;
+    }
+    void Add(uint64_t key) {
+        filter->insert(key);
+    }
+    bool Contain(uint64_t &item) {
+        return filter->likely_contains(item);
+    };
+    size_t SizeInBytes() const {
+        // TODO don't know how to get / calculate it
+        return size;
+    }
+};
+
+template<>
+struct FilterAPI<MortonFilter> {
+    using Table = MortonFilter;
+    static Table ConstructFromAddCount(size_t add_count) {
+        return Table(add_count);
+    }
+    static void Add(uint64_t key, Table* table) {
+        table->Add(key);
+    }
+    static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
+        for(int i=start; i<end; i++) {
+            table->Add(keys[i]);
+        }
+    }
+    static void Remove(uint64_t key, Table * table) {
+        throw std::runtime_error("Unsupported");
+    }
+    CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, Table * table) {
+        return table->Contain(key);
+    }
+};
+
+
 class XorSingle {
     xor8_s filter;
 public:
@@ -317,7 +368,7 @@ public:
         }
     }
     ~XorSingle() {
-        ::xor8_free(&filter);
+        xor8_free(&filter);
     }
     bool AddAll(const uint64_t* data, const size_t start, const size_t end) {
         return xor8_buffered_populate(data + start, end - start, &filter);
@@ -887,6 +938,7 @@ int main(int argc, char * argv[]) {
     {62, "SuccCountBlockBloom10"},
 
     {70, "Xor8-singleheader"},
+    {80, "Morton"},
 
     // Sort
     {100, "Sort"},
@@ -1341,6 +1393,14 @@ int main(int argc, char * argv[]) {
   if (algorithmId == a || algorithmId < 0 || (algos.find(a) != algos.end())) {
       auto cf = FilterBenchmark<
           XorSingle>(
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
+      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
+  }
+
+  a = 80;
+  if (algorithmId == a || algorithmId < 0 || (algos.find(a) != algos.end())) {
+      auto cf = FilterBenchmark<
+          MortonFilter>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
       cout << setw(NAME_WIDTH) << names[a] << cf << endl;
   }
