@@ -2,22 +2,22 @@
 OPT = -O3 -DNDEBUG
 #OPT = -g -ggdb
 
-CXXFLAGS += -fno-strict-aliasing -Wall -std=c++11 -I. -I../src/ $(OPT) 
+CXXFLAGS += -fno-strict-aliasing -Wall -std=c++11 -I. -I../src/ -I../src/cuckoo/ -I../src/gqf/ -I../src/morton/ $(OPT)
 
 UNAME_P := $(shell uname -p)
 ifeq ($(UNAME_P),aarch64)
-        CXXFLAGS += 
+        CXXFLAGS +=
 else
 ifeq ($(UNAME_P),unknown)
-        CXXFLAGS += 
+        CXXFLAGS +=
 else
 	CXXFLAGS += -march=native
 endif
 endif
 
-LDFLAGS = -Wall 
+LDFLAGS = -Wall
 
-HEADERS = $(wildcard ../src/*.h) *.h
+HEADERS = $(wildcard ../src/*.h ../src/cuckoo/*.h ../src/gqf/*.h ../src/morton/*.h) *.h
 
 
 

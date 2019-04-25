@@ -28,6 +28,7 @@
 #include "xorfilter_2.h"
 #include "xorfilter_2n.h"
 #include "xorfilter_plus.h"
+#include "xorfilter_singleheader.h"
 #include "bloom.h"
 #include "counting_bloom.h"
 #include "gcs.h"
@@ -305,6 +306,48 @@ struct FilterAPI<XorFilter<ItemType, FingerprintType>> {
   CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));
   }
+};
+
+class XorSingle {
+    xor8_s filter;
+public:
+    XorSingle(const size_t size) {
+        if (!xor8_allocate(size, &filter)) {
+            throw ::std::runtime_error("Allocation failed");
+        }
+    }
+    ~XorSingle() {
+        ::xor8_free(&filter);
+    }
+    bool AddAll(const uint64_t* data, const size_t start, const size_t end) {
+        return xor8_buffered_populate(data + start, end - start, &filter);
+    }
+    bool Contain(uint64_t &item) {
+        return xor8_contain(item, &filter);
+    };
+    size_t SizeInBytes() const {
+        return xor8_size_in_bytes(&filter);
+    }
+};
+
+template<>
+struct FilterAPI<XorSingle> {
+    using Table = XorSingle;
+    static Table ConstructFromAddCount(size_t add_count) {
+        return Table(add_count);
+    }
+    static void Add(uint64_t key, Table* table) {
+        throw std::runtime_error("Unsupported");
+    }
+    static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
+        table->AddAll(keys.data(), start, end);
+    }
+    static void Remove(uint64_t key, Table * table) {
+        throw std::runtime_error("Unsupported");
+    }
+    CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, Table * table) {
+        return table->Contain(key);
+    }
 };
 
 template<size_t blocksize, int k, typename HashFamily>
@@ -842,6 +885,9 @@ int main(int argc, char * argv[]) {
     {60, "CountingBloom10 (addall)"},
     {61, "SuccCountingBloom10 (addall)"},
     {62, "SuccCountBlockBloom10"},
+
+    {70, "Xor8-singleheader"},
+
     // Sort
     {100, "Sort"},
   };
@@ -1288,6 +1334,14 @@ int main(int argc, char * argv[]) {
       auto cf = FilterBenchmark<
           SuccinctCountingBlockedBloomFilter<uint64_t, 10, SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, false, true);
+      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
+  }
+
+  a = 70;
+  if (algorithmId == a || algorithmId < 0 || (algos.find(a) != algos.end())) {
+      auto cf = FilterBenchmark<
+          XorSingle>(
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
       cout << setw(NAME_WIDTH) << names[a] << cf << endl;
   }
 
