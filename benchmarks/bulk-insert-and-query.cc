@@ -360,9 +360,9 @@ struct FilterAPI<MortonFilter> {
 
 
 class XorSingle {
-    xor8_s filter;
 public:
-    XorSingle(const size_t size) {
+    xor8_s filter; // let us expose the struct. to avoid indirection
+    explicit XorSingle(const size_t size) {
         if (!xor8_allocate(size, &filter)) {
             throw ::std::runtime_error("Allocation failed");
         }
@@ -373,12 +373,17 @@ public:
     bool AddAll(const uint64_t* data, const size_t start, const size_t end) {
         return xor8_buffered_populate(data + start, end - start, &filter);
     }
-    bool Contain(uint64_t &item) {
+    inline bool Contain(uint64_t &item) const {
         return xor8_contain(item, &filter);
-    };
-    size_t SizeInBytes() const {
+    }
+    inline size_t SizeInBytes() const {
         return xor8_size_in_bytes(&filter);
     }
+    XorSingle(XorSingle && o) : filter(o.filter)  {
+        o.filter.fingerprints = nullptr; // we take ownership for the data
+    }
+private: 
+    XorSingle(const XorSingle & o) = delete;
 };
 
 template<>
@@ -396,8 +401,9 @@ struct FilterAPI<XorSingle> {
     static void Remove(uint64_t key, Table * table) {
         throw std::runtime_error("Unsupported");
     }
-    CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, Table * table) {
-        return table->Contain(key);
+    CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
+        // some compilers are not smart enough to do the inlining properly
+        return xor8_contain(key, & table->filter);
     }
 };
 
