@@ -346,7 +346,7 @@ struct FilterAPI<MortonFilter> {
         table->Add(key);
     }
     static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
-        for(int i=start; i<end; i++) {
+        for (size_t i = start; i < end; i++) {
             table->Add(keys[i]);
         }
     }
@@ -382,7 +382,7 @@ public:
     XorSingle(XorSingle && o) : filter(o.filter)  {
         o.filter.fingerprints = nullptr; // we take ownership for the data
     }
-private: 
+private:
     XorSingle(const XorSingle & o) = delete;
 };
 
