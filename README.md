@@ -18,7 +18,6 @@ Expectations:
 
 ## Usage
 
-
 Make sure to select the right GNU GCC compiler (e.g., via `export export CXX=g++-8`).
 You may want to disable hyperthreading and adjust page sizes. Run the benchmark 
 on a quiet machine.
@@ -58,6 +57,22 @@ the other five lines give you information regarding the queries where a given pe
 in the set. We use Linux performance counters to measure instructions, cache misses and branch misses.
 
 As part of the benchmark, we check the correctness of the implementation.
+
+## Benchmarking
+
+The shell script `benchmark/benchmark.sh` runs the benchmark 3 times for the most important algorithms, with entry sizes of 10 million and 100 million keys. It is much slower than the above, because each invocation runs only one algorithm (to ensure running one algorithm doesn't influence benchmark results of other algorithms). It stores the results in the file `benchmark-results.txt`. To futher analyze the results, use the java tool `AnalyzeResults.java` from the project https://github.com/FastFilter/fastfilter_java. Complete steps to run the tests and analyze the results:
+
+    git clone https://github.com/FastFilter/fastfilter_cpp.git
+    git clone https://github.com/FastFilter/fastfilter_java.git
+    cd fastfilter_cpp/benchmarks
+    make clean ; make
+    # this may take a few hours to run
+    ./benchmark.sh
+    
+    cd ../..
+    cd fastfilter_java
+    mvn clean install
+    java -cp target/test-classes org.fastfilter.analysis.AnalyzeResults ../fastfilter_cpp/benchmarks/benchmark-results.txt 
 
 
 ## Where is your code?
