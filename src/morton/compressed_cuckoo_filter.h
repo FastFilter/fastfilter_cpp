@@ -455,7 +455,17 @@ namespace CompressedCuckoo{
     // Currently set to false because clear_swath hasn't been rigorously tested
     constexpr bool _only_clear_ota_and_fca = false;
     if(!_only_clear_ota_and_fca){ // Competitive with the code in the loop below
+
+// from https://phabricator.kde.org/D13900
+#if defined(__GNUC__) && !defined(__INTEL_COMPILER) && (((__GNUC__ * 100) + __GNUC_MINOR__) >= 800)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
       memset(storage, 0x0, allocation_size);
+#if defined(__GNUC__) && !defined(__INTEL_COMPILER) && (((__GNUC__ * 100) + __GNUC_MINOR__) >= 800)
+#pragma GCC diagnostic pop
+#endif
+
       return storage;
     } // ELSE
     for(hash_t i = 0; i < total_blocks; i++){
