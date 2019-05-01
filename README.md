@@ -77,11 +77,14 @@ The shell script `benchmark/benchmark.sh` runs the benchmark 3 times for the mos
 
 ## Where is your code?
 
-The filter implementations are in `src`, most are single header files and depend on `src/hashutil.h`:
+The filter implementations are in `src/<type>/`. Most implementations depend on `src/hashutil.h`. Examples:
 
-* src/bloom.h
-* src/xorfilter.h
+* src/bloom/bloom.h
+* src/xorfilter/xorfilter.h
 
 ## Credit
 
 The cuckoo filter and the benchmark are derived from https://github.com/efficient/cuckoofilter by Bin Fan et al.
+The SIMD blocked Bloom filter is from https://github.com/apache/impala (via the cuckoo filter).
+The Morton filter is from https://github.com/AMDComputeLibraries/morton_filter.
+The Counting Quotient Filter (CQF) is from https://github.com/splatlab/cqf.
