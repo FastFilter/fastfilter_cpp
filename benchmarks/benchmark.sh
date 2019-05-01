@@ -9,4 +9,4 @@ for rnd in `seq -1 -1`; do
       done;
     done;
   done;
-done > results-2019-03-29.txt
+done > benchmark-results.txt
