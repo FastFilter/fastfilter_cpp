@@ -9,7 +9,7 @@ Developers might want to consider our [Header-only Xor Filter library in C](http
 ## Prerequisites
 
 - A  C++11 compiler such as GNU G++ or LLVM Clang++
-- Make 
+- Make
 
 Expectations:
 
@@ -19,7 +19,7 @@ Expectations:
 ## Usage
 
 Make sure to select the right GNU GCC compiler (e.g., via `export export CXX=g++-8`).
-You may want to disable hyperthreading and adjust page sizes. Run the benchmark 
+You may want to disable hyperthreading and adjust page sizes. Run the benchmark
 on a quiet machine.
 
 
@@ -48,7 +48,7 @@ add    cycles: 325.5/key, instructions: (303.2/key, 0.93/cycle) cache misses: 12
 0.75%  cycles:  82.0/key, instructions: ( 48.0/key, 0.59/cycle) cache misses:  3.06/key branch misses: 0.00/key
 1.00%  cycles:  81.9/key, instructions: ( 48.0/key, 0.59/cycle) cache misses:  3.06/key branch misses: 0.00/key
                             Xor8  106.79    0.00   25.92   25.88   25.86   25.94   25.98  0.3892%       9.84       8.01   22.9%    10.0
-                            
+
 ... # many more lines omitted
 ```
 
@@ -60,19 +60,28 @@ As part of the benchmark, we check the correctness of the implementation.
 
 ## Benchmarking
 
-The shell script `benchmark/benchmark.sh` runs the benchmark 3 times for the most important algorithms, with entry sizes of 10 million and 100 million keys. It is much slower than the above, because each invocation runs only one algorithm (to ensure running one algorithm doesn't influence benchmark results of other algorithms). It stores the results in the file `benchmark-results.txt`. To futher analyze the results, use the java tool `AnalyzeResults.java` from the project https://github.com/FastFilter/fastfilter_java. Complete steps to run the tests and analyze the results:
+The shell script `benchmark/benchmark.sh` runs the benchmark 3 times for the most important algorithms,
+with entry sizes of 10 million and 100 million keys.
+It is much slower than the above, because each invocation runs only one algorithm
+(to ensure running one algorithm doesn't influence benchmark results of other algorithms).
+It stores the results in the file `benchmark-results.txt`.
+To futher analyze the results, use the java tool `AnalyzeResults.java`
+from the project https://github.com/FastFilter/fastfilter_java.
+Requires GCC and Java 8.
+To get a low error, it is best run on a Linux machine that is not otherwise in use.
+Steps to run the tests and analyze the results:
 
     git clone https://github.com/FastFilter/fastfilter_cpp.git
     git clone https://github.com/FastFilter/fastfilter_java.git
     cd fastfilter_cpp/benchmarks
     make clean ; make
-    # this may take a few hours to run
+    # this may take an hour to run
     ./benchmark.sh
-    
+
     cd ../..
     cd fastfilter_java
     mvn clean install
-    java -cp target/test-classes org.fastfilter.analysis.AnalyzeResults ../fastfilter_cpp/benchmarks/benchmark-results.txt 
+    java -cp target/test-classes org.fastfilter.analysis.AnalyzeResults ../fastfilter_cpp/benchmarks/benchmark-results.txt
 
 
 ## Where is your code?
