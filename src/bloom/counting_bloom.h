@@ -516,6 +516,9 @@ private:
   void Increment(size_t group, int bit);
   void Decrement(size_t group, int bit);
   int ReadCount(size_t group, int bit);
+#ifdef VERIFY_COUNT
+  void VerifyCount(size_t group, int bit, int line);
+#endif
 
 public:
   explicit SuccinctCountingBlockedBloomFilter(const int capacity);
@@ -642,13 +645,24 @@ void SuccinctCountingBlockedBloomFilter<ItemType, bits_per_item, HashFamily, k>:
         counts[group] = c;
     }
 #ifdef VERIFY_COUNT
-    for(int b = 0; b < 64; b++) {
-        if (realCount[(group << 6) + b] != ReadCount(group, b)) {
-            ::std::cout << "group " << group << "/" << b << " of " << bit << "\n";
-        }
-    }
+    VerifyCount(group, bit, __LINE__);
 #endif
 }
+
+#ifdef VERIFY_COUNT
+template <typename ItemType, size_t bits_per_item, typename HashFamily, int k>
+void SuccinctCountingBlockedBloomFilter<ItemType, bits_per_item, HashFamily, k>::
+    VerifyCount(size_t group, int bit, int line) {
+    for(int b = 0; b < 64; b++) {
+        if (realCount[(group << 6) + b] != ReadCount(group, b)) {
+            ::std::cout << "group " << group << " bit " << b <<
+            " expected " << (int) realCount[(group << 6) + b] <<
+            " got " << ReadCount(group, b) <<
+            " at bit " << bit << " at line " << line << "\n";
+        }
+    }
+}
+#endif
 
 template <typename ItemType, size_t bits_per_item, typename HashFamily, int k>
 int SuccinctCountingBlockedBloomFilter<ItemType, bits_per_item, HashFamily, k>::
@@ -737,11 +751,7 @@ void SuccinctCountingBlockedBloomFilter<ItemType, bits_per_item, HashFamily, k>:
         data[group] = m & ~(removed << bit);
     }
 #ifdef VERIFY_COUNT
-    for(int b = 0; b < 64; b++) {
-        if (realCount[(group << 6) + b] != ReadCount(group, b)) {
-            ::std::cout << "group- " << group << "/" << b << " of " << bit << "\n";
-        }
-    }
+    VerifyCount(group, bit, __LINE__);
 #endif
 }
 
@@ -794,6 +804,9 @@ private:
   void Increment(size_t group, int bit);
   void Decrement(size_t group, int bit);
   int ReadCount(size_t group, int bit);
+#ifdef VERIFY_COUNT
+  void VerifyCount(size_t group, int bit, int line);
+#endif
 
 public:
   explicit SuccinctCountingBlockedBloomRankFilter(const int capacity);
@@ -879,6 +892,9 @@ void SuccinctCountingBlockedBloomRankFilter<ItemType, bits_per_item, HashFamily,
         size_t bitIndex = x & 63;
         overflow[index + bitIndex / 8] += getBit(bitIndex);
         data[group] |= (1L << x);
+#ifdef VERIFY_COUNT
+        VerifyCount(group, x, __LINE__);
+#endif
         return;
     }
     uint64_t d = (m >> x) & 1;
@@ -941,24 +957,31 @@ void SuccinctCountingBlockedBloomRankFilter<ItemType, bits_per_item, HashFamily,
         int bitIndex = x & 63;
         overflow[index + bitIndex / 8] += getBit(bitIndex);
 #ifdef VERIFY_COUNT
-    for(int b = 0; b < 64; b++) {
-        if (realCount[(group << 6) + b] != ReadCount(group, b)) {
-            ::std::cout << "group " << group << "/" << b << " of " << x << "\n";
-        }
-    }
+        VerifyCount(group, x, __LINE__);
 #endif
         return;
     }
     data[group] |= 1L << x;
     counts[group] = c;
 #ifdef VERIFY_COUNT
-    for(int b = 0; b < 64; b++) {
-        if (realCount[(group << 6) + b] != ReadCount(group, b)) {
-            ::std::cout << "group " << group << "/" << b << " of " << x << "\n";
-        }
-    }
+    VerifyCount(group, x, __LINE__);
 #endif
 }
+
+#ifdef VERIFY_COUNT
+template <typename ItemType, size_t bits_per_item, typename HashFamily, int k>
+void SuccinctCountingBlockedBloomRankFilter<ItemType, bits_per_item, HashFamily, k>::
+    VerifyCount(size_t group, int bit, int line) {
+    for(int b = 0; b < 64; b++) {
+        if (realCount[(group << 6) + b] != ReadCount(group, b)) {
+            ::std::cout << "group " << group << " bit " << b <<
+            " expected " << (int) realCount[(group << 6) + b] <<
+            " got " << ReadCount(group, b) <<
+            " at bit " << bit << " at line " << line << "\n";
+        }
+    }
+}
+#endif
 
 template <typename ItemType, size_t bits_per_item, typename HashFamily, int k>
 int SuccinctCountingBlockedBloomRankFilter<ItemType, bits_per_item, HashFamily, k>::
@@ -1000,7 +1023,7 @@ int SuccinctCountingBlockedBloomRankFilter<ItemType, bits_per_item, HashFamily, 
             break;
         }
         if (count > 16) {
-            // not supported
+            // unexpected
             ::std::cout << "group- " << group << " count " << count << "\n";
         }
     }
@@ -1048,12 +1071,12 @@ void SuccinctCountingBlockedBloomRankFilter<ItemType, bits_per_item, HashFamily,
         }
         if (count < 64) {
             // convert back to an inline entry, and free up the overflow entry
-            int count2 = 0;
             int temp[64];
-            for(int j = 63; j >= 0; j--) {
-                int cj = (int) ((overflow[index + j / 8] >> (8 * j)) & 0xff);
-                temp[j] = cj;
+            int count2 = 0;
+            for(int j = 0; j < 64; j++) {
+                int cj = (int) ((overflow[index + j / 8] >> (8 * (j & 7))) & 0xff);
                 count2 += cj;
+                temp[j] = cj;
             }
             uint64_t c2 = 0;
             int off = 0;
@@ -1072,11 +1095,9 @@ void SuccinctCountingBlockedBloomRankFilter<ItemType, bits_per_item, HashFamily,
             // freeOverflow(index);
             overflow[index] = nextFreeOverflow;
             nextFreeOverflow = index;
-            /*
-            if (VERIFY_COUNTS) {
-                verifyCounts((group << 6), ((group + 1) << 6));
-            }
-            */
+#ifdef VERIFY_COUNT
+            VerifyCount(group, x, __LINE__);
+#endif
         }
         return;
     }
@@ -1123,12 +1144,7 @@ void SuccinctCountingBlockedBloomRankFilter<ItemType, bits_per_item, HashFamily,
     // possibly reset the data bit
     data[group] = m & ~((d==0?1L:0L) << x);
 #ifdef VERIFY_COUNT
-// TODO something wrong here
-    for(int b = 0; b < 64; b++) {
-        if (realCount[(group << 6) + b] != ReadCount(group, b)) {
-            ::std::cout << "group- " << group << "/" << b << " of " << x << "\n";
-        }
-    }
+    VerifyCount(group, x, __LINE__);
 #endif
 }
 
