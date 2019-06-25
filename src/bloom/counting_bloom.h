@@ -37,7 +37,7 @@ inline int select64(uint64_t k, uint64_t x) {
 */
 //#if defined(__BMI2__)
 // use a macro, to ensure it is inlined
-//#define select64(A, B) _tzcnt_u64(_pdep_u64(1ULL << (B), (A)))
+#define select64(A, B) _tzcnt_u64(_pdep_u64(1ULL << (B), (A)))
 /*
 #else
 inline int select64(uint64_t x, int n) {
@@ -73,6 +73,7 @@ inline int select64(uint64_t x, int n) {
 */
 //#endif
 
+/*
 #define ONES_STEP_4 0x1111111111111111ULL
 #define ONES_STEP_8 0x0101010101010101ULL
 #define MSBS_STEP_8 (0x80L * ONES_STEP_8)
@@ -203,7 +204,7 @@ inline int select64(uint64_t x, int n) {
     return byteOffset +
             SELECT_IN_BYTE[(int) ((x >> byteOffset) & 0xFF) | byteRank << 8];
 }
-
+*/
 
 inline int numberOfLeadingZeros64(uint64_t x) {
     // If x is 0, the result is undefined.
