@@ -258,6 +258,8 @@ namespace CompressedCuckoo{
     // The number of times that we've doubled the filter's capacity
     uint_fast16_t _resize_count;
 
+    size_t sizeInBytes;
+
     friend Tester; // Class with a bunch of test functions in test.cc
 
   public:
@@ -274,6 +276,11 @@ namespace CompressedCuckoo{
     _block_fullness_array(_block_fullness_array_enabled ? _total_blocks : 0, 0),
     _resize_count(0)
   {
+
+    sizeInBytes = 0;
+    sizeInBytes += sizeof(bool) * (_block_fullness_array_enabled ? _total_blocks : 0);
+    sizeInBytes += sizeof(counter_t) * (_buckets_per_block + 1);
+    sizeInBytes += sizeof(block_t) * _total_blocks;
 
     // Supporting dual use as a compressed cuckoo filter and Morton filter
     static_assert((_morton_filter_functionality_enabled ^ (_ota_len_bits == 0)),
@@ -335,6 +342,9 @@ namespace CompressedCuckoo{
     }
   }
 
+  size_t SizeInBytes() {
+    return sizeInBytes;
+  }
 
   INLINE atom_t fingerprint_function(const hash_t raw_hash) const{
     atom_t fingerprint =

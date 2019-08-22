@@ -318,6 +318,7 @@ class MortonFilter {
     size_t size;
 public:
     MortonFilter(const size_t size) {
+        // filter = new Morton3_8((size_t) (size / 0.50) + 64);
         filter = new Morton3_8((size_t) (2.1 * size) + 64);
         this->size = size;
     }
@@ -331,8 +332,14 @@ public:
         return filter->likely_contains(item);
     };
     size_t SizeInBytes() const {
-        // TODO don't know how to get / calculate it
-        return size;
+        // according to morton_sample_configs.h:
+        // Morton3_8 - 3-slot buckets with 8-bit fingerprints: 11.7 bits/item
+        // (load factor = 0.95)
+        // so in theory we could just hardcode the size here,
+        // and don't measure it
+        // return (size_t)((size * 11.7) / 8);
+
+        return filter->SizeInBytes();
     }
 };
 
