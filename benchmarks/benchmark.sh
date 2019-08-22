@@ -6,7 +6,7 @@
 # rnd: random number generators to use
 for rnd in `seq -1 -1`; do
   # alg: algorithms to test
-  for alg in 0 2 3 4 11 12 13 20 40 41 42 51 100; do
+  for alg in 0 2 3 4 11 12 13 15 16 17 20 30 40 41 42 51 80 100; do
     # m: number of entries
     for m in `seq 10 90 100`; do
       # test: test id
@@ -17,4 +17,4 @@ for rnd in `seq -1 -1`; do
       done;
     done;
   done;
-done > benchmark-results.txt
+done > benchmark-results.txt 2>&1
