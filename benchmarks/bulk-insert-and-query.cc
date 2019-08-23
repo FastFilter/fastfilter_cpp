@@ -318,8 +318,8 @@ class MortonFilter {
     size_t size;
 public:
     MortonFilter(const size_t size) {
-        // filter = new Morton3_8((size_t) (size / 0.50) + 64);
-        filter = new Morton3_8((size_t) (2.1 * size) + 64);
+        filter = new Morton3_8((size_t) (size / 0.95) + 64);
+        // filter = new Morton3_8((size_t) (2.1 * size) + 64);
         this->size = size;
     }
     ~MortonFilter() {
@@ -328,7 +328,17 @@ public:
     void Add(uint64_t key) {
         filter->insert(key);
     }
-    bool Contain(uint64_t &item) {
+    void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end) {
+        size_t size = end - start;
+        ::std::vector<uint64_t> k(size);
+        ::std::vector<bool> status(size);
+        for (size_t i = start; i < end; i++) {
+            k[i - start] = keys[i];
+        }
+        // TODO return value and status is ignored currently
+        filter->insert_many(k, status, size);
+    }
+    inline bool Contain(uint64_t &item) {
         return filter->likely_contains(item);
     };
     size_t SizeInBytes() const {
@@ -353,9 +363,7 @@ struct FilterAPI<MortonFilter> {
         table->Add(key);
     }
     static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
-        for (size_t i = start; i < end; i++) {
-            table->Add(keys[i]);
-        }
+        table->AddAll(keys, start, end);
     }
     static void Remove(uint64_t key, Table * table) {
         throw std::runtime_error("Unsupported");
