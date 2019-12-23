@@ -101,3 +101,12 @@ The cuckoo filter and the benchmark are derived from https://github.com/efficien
 The SIMD blocked Bloom filter is from https://github.com/apache/impala (via the cuckoo filter).
 The Morton filter is from https://github.com/AMDComputeLibraries/morton_filter.
 The Counting Quotient Filter (CQF) is from https://github.com/splatlab/cqf.
+
+
+# Implementations of xor filters in other programming languages
+
+* [Go](https://github.com/FastFilter/xorfilter)
+* [Erlang](https://github.com/mpope9/exor_filter)
+* [Rust](https://github.com/codri/xorfilter-rs)
+* [Java](https://github.com/FastFilter/fastfilter_java)
+* [C](https://github.com/FastFilter/xor_singleheader)
