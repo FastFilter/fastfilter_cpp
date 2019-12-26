@@ -110,3 +110,4 @@ The Counting Quotient Filter (CQF) is from https://github.com/splatlab/cqf.
 * Rust: [1](https://github.com/bnclabs/xorfilter) and [2](https://github.com/codri/xorfilter-rs)
 * [Java](https://github.com/FastFilter/fastfilter_java)
 * [C](https://github.com/FastFilter/xor_singleheader)
+* [Python](https://github.com/GreyDireWolf/pyxorfilter)
