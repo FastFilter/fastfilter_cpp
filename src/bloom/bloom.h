@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <assert.h>
+#include <sstream>
 
 #include "hashutil.h"
 
@@ -112,6 +113,14 @@ template <typename ItemType, size_t bits_per_item, bool branchless,
           typename HashFamily, int k>
 Status BloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::AddAll(
     const ItemType* keys, const size_t start, const size_t end) {
+  // we have that AddAll assumes that arrayLength << 6 is a 
+  // 32-bit integer
+  if(arrayLength > 0x3ffffff) {
+    for(size_t i = start; i < end; i++) {
+      Add(keys[i]);
+    }
+    return Ok;
+  }
   int blocks = 1 + arrayLength / blockLen;
   uint32_t *tmp = new uint32_t[blocks * blockLen];
   int *tmpLen = new int[blocks]();
@@ -243,12 +252,6 @@ SimpleBlockFilter<blocksize, k, HashFamily>::Add(const uint64_t key) noexcept {
   const auto hash = hasher_(key);
   const uint32_t idx = reduce(hash, arrayLength);
   uint64_t *bucket = data + idx;
-//  uint32_t a = (uint32_t)(hash ^ (hash >> 32));
-
-//  *bucket++ |= (uint64_t) ((1L << (a & 63)) | (1L << ((a >> 6) & 63)));
-//  *bucket |= (uint64_t) ((1L << ((a >> 12) & 63)) | (1L << ((a >> 18) & 63)));
-
-//  *bucket++ |= (uint64_t) (a & (a >> 1));
   uint64_t m1 = 1L << hash;
   uint64_t m2 = 1L << (hash >> 8);
   uint64_t m = m1 | m2;
@@ -262,21 +265,10 @@ SimpleBlockFilter<blocksize, k, HashFamily>::Find(const uint64_t key) const
   const auto hash = hasher_(key);
   const uint32_t idx = reduce(hash, arrayLength);
   uint64_t *bucket = data + idx;
-//  uint32_t a = (uint32_t)(hash ^ (hash >> 32));
-//  uint64_t m1 = (uint64_t) ((1L << (a & 63)) | (1L << ((a >> 6) & 63)));
-//  uint64_t m2 = (uint64_t) ((1L << ((a >> 12) & 63)) | (1L << ((a >> 18) & 63)));
   uint64_t m1 = 1L << hash;
   uint64_t m2 = 1L << (hash >> 8);
   uint64_t m = m1 | m2;
   return !((m & *bucket) - m);
-
-/*
-  uint64_t x = *bucket++;
-//  a += b;
-//  x = *bucket++;
-//  y &= (x >> (a & 63)) & (x >> ((a >> 8) & 63));
-  return y & 1;
-*/
 }
 
 } // namespace bloomfilter
