@@ -23,6 +23,67 @@ inline uint32_t reduce(uint32_t hash, uint32_t n) {
   return (uint32_t)(((uint64_t)hash * n) >> 32);
 }
 
+/**
+* Given a value "word", produces an integer in [0,p) without division.
+* The function is as fair as possible in the sense that if you iterate
+* through all possible values of "word", then you will generate all
+* possible outputs as uniformly as possible.
+*/
+static inline uint32_t fastrange32(uint32_t word, uint32_t p) {
+  // http://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/
+	return (uint32_t)(((uint64_t)word * (uint64_t)p) >> 32);
+}
+
+#if defined(_MSC_VER) && defined (_WIN64)
+#include <intrin.h>// should be part of all recent Visual Studio
+#pragma intrinsic(_umul128)
+#endif // defined(_MSC_VER) && defined (_WIN64)
+
+
+/**
+* Given a value "word", produces an integer in [0,p) without division.
+* The function is as fair as possible in the sense that if you iterate
+* through all possible values of "word", then you will generate all
+* possible outputs as uniformly as possible.
+*/
+static inline uint64_t fastrange64(uint64_t word, uint64_t p) {
+  // http://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/
+#ifdef __SIZEOF_INT128__ // then we know we have a 128-bit int
+	return (uint64_t)(((__uint128_t)word * (__uint128_t)p) >> 64);
+#elif defined(_MSC_VER) && defined(_WIN64)
+	// supported in Visual Studio 2005 and better
+	uint64_t highProduct;
+	_umul128(word, p, &highProduct); // ignore output
+	return highProduct;
+	unsigned __int64 _umul128(
+		unsigned __int64 Multiplier,
+		unsigned __int64 Multiplicand,
+		unsigned __int64 *HighProduct
+	);
+#else
+	return word % p; // fallback
+#endif // __SIZEOF_INT128__
+}
+
+
+#ifndef UINT32_MAX
+#define UINT32_MAX  (0xffffffff)
+#endif // UINT32_MAX
+
+/**
+* Given a value "word", produces an integer in [0,p) without division.
+* The function is as fair as possible in the sense that if you iterate
+* through all possible values of "word", then you will generate all
+* possible outputs as uniformly as possible.
+*/
+static inline size_t fastrangesize(uint64_t word, size_t p) {
+#if (SIZE_MAX == UINT32_MAX)
+	return (size_t)fastrange32(word, p);
+#else // assume 64-bit
+	return (size_t)fastrange64(word, p);
+#endif // SIZE_MAX == UINT32_MAX
+}
+
 static size_t getBestK(size_t bitsPerItem) {
   return max(1, (int)round((double)bitsPerItem * log(2)));
 }
@@ -85,14 +146,14 @@ template <typename ItemType, size_t bits_per_item, bool branchless,
 Status BloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::Add(
     const ItemType &key) {
   uint64_t hash = hasher(key);
-  uint32_t a = (uint32_t)(hash >> 32);
-  uint32_t b = (uint32_t)hash;
+  uint64_t a = (hash >> 32) | (hash << 32);
+  uint64_t b = hash;
   for (int i = 0; i < k; i++) {
     // int index = reduce(a, this->bitCount);
     // data[index >> 6] |= getBit(index);
     // reworked to avoid overflows
     // use the fact that reduce is not very sensitive to lower bits of a
-    data[reduce(a, this->arrayLength)] |= getBit(a);
+    data[fastrangesize(a, this->arrayLength)] |= getBit(a);
     a += b;
   }
   return Ok;
@@ -118,10 +179,10 @@ Status BloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::AddAll(
   for (size_t i = start; i < end; i++) {
     uint64_t key = keys[i];
     uint64_t hash = hasher(key);
-    uint32_t a = (uint32_t)(hash >> 32);
-    uint32_t b = (uint32_t)hash;
+    uint64_t a = (hash >> 32) | (hash << 32);;
+    uint64_t b = hash;
     for (int j = 0; j < k; j++) {
-      int index = reduce(a, this->arrayLength);
+      int index = fastrangesize(a, this->arrayLength);
       int block = index >> blockShift;
       int len = tmpLen[block];
       tmp[(block << blockShift) + len] = (index << 6) + (a & 63);
@@ -149,27 +210,27 @@ template <typename ItemType, size_t bits_per_item, bool branchless,
 Status BloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::Contain(
     const ItemType &key) const {
   uint64_t hash = hasher(key);
-  uint32_t a = (uint32_t)(hash >> 32);
-  uint32_t b = (uint32_t)hash;
+  uint64_t a = (hash >> 32) | (hash << 32);;
+  uint64_t b = hash;
   if (branchless && k >= 3) {
-    int b0 = data[reduce(a, this->arrayLength)] >> (a & 63);
+    int b0 = data[fastrangesize(a, this->arrayLength)] >> (a & 63);
     a += b;
-    int b1 = data[reduce(a, this->arrayLength)] >> (a & 63);
+    int b1 = data[fastrangesize(a, this->arrayLength)] >> (a & 63);
     a += b;
-    int b2 = data[reduce(a, this->arrayLength)] >> (a & 63);
+    int b2 = data[fastrangesize(a, this->arrayLength)] >> (a & 63);
     if ((b0 & b1 & b2 & 1) == 0) {
         return NotFound;
     }
     for (int i = 3; i < k; i++) {
       a += b;
-      if (((data[reduce(a, this->arrayLength)] >> (a & 63)) & 1) == 0) {
+      if (((data[fastrangesize(a, this->arrayLength)] >> (a & 63)) & 1) == 0) {
           return NotFound;
       }
     }
     return Ok;
   }
   for (int i = 0; i < k; i++) {
-    if ((data[reduce(a, this->arrayLength)] & getBit(a)) == 0) {
+    if ((data[fastrangesize(a, this->arrayLength)] & getBit(a)) == 0) {
       return NotFound;
     }
     a += b;
