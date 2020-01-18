@@ -108,208 +108,6 @@ public:
 
 };
 
-// from https://github.com/rob-p/rank_speed_test/blob/master/src/poppy.cpp
-// license:
-// GNU Lesser General Public License v3.0
-// which looks like it's from
-// https://github.com/efficient/rankselect
-// license:
-// Copyright (C) 2013, Carnegie Mellon University
-// Licensed under the Apache License, Version 2.0 (the "License")
-
-const int kWordSize = 64;
-const int kBasicBlockSize = 512;
-const int kBasicBlockBits = 9;
-const int kBasicBlockMask = kBasicBlockSize - 1;
-const int kWordCountPerBasicBlock = kBasicBlockSize / kWordSize;
-const int kCacheLineSize = 64;
-
-// #define USE_POPPY
-
-class Poppy {
-private:
-    uint64_t *bits_;
-    uint64_t num_bits_;
-    uint64_t num_counts_;
-
-    uint64_t *l2Entries_;
-    uint64_t l2EntryCount_;
-    uint64_t *l1Entries_;
-    uint64_t l1EntryCount_;
-    uint64_t basicBlockCount_;
-
-    uint32_t *loc_[1 << 16];
-    uint32_t locCount_[1 << 16];
-
-    static const int kLocFreq = 8192;
-    static const int kLocFreqMask = 8191;
-    static const int kL2EntryCountPerL1Entry = 1 << 21;
-    static const int kBasicBlockCountPerL1Entry = 1 << 23;
-
-public:
-    Poppy(uint64_t * const bits, const uint64_t num_bits);
-
-    inline uint64_t rank(uint64_t pos);
-    inline uint64_t get(uint64_t pos) {
-        return (bits_[(size_t) (pos >> 6)] >> (63 - (pos & 63))) & 1;
-    }
-
-    uint64_t getBitCount() {
-        return num_counts_;
-    }
-
-};
-
-#define popcountsize 64ULL
-#define popcountmask (popcountsize - 1)
-#define _mm_popcnt_u64 bitCount64
-
-inline uint64_t popcountLinear(uint64_t *bits, uint64_t x, uint64_t nbits) {
-    if (nbits == 0)
-        return 0;
-
-    uint64_t lastword = (nbits - 1) / popcountsize;
-    uint64_t p = 0;
-
-    for (int i = 0; i < lastword; i++) {
-        p += _mm_popcnt_u64(bits[x+i]);
-    }
-
-    uint64_t lastshifted = bits[x+lastword] >> (63 - ((nbits - 1) & popcountmask));
-    p += _mm_popcnt_u64(lastshifted);
-    return p;
-}
-
-Poppy::Poppy(uint64_t * const bits, uint64_t num_bits) {
-    size_t bitsArraySize = (size_t) ((num_bits + 511) / 512) * 512 / 64;
-    // TODO use posix_memalign
-    posix_memalign((void **) &bits_, kCacheLineSize, (bitsArraySize + 16) * sizeof(uint64_t));
-    // bits_ = new uint64_t[bitsArraySize + 16]();
-
-    for(int i=0; i<bitsArraySize; i++) {
-        uint64_t x = bits[i];
-        uint64_t y = 0;
-        for(int j=0; j<64; j++) {
-            y = (y << 1) | (x & 0x1);
-            x >>= 1;
-        }
-        bits_[i] = y;
-    }
-    num_bits = (bitsArraySize + 16) * 64;
-
-    // memcpy(bits_, bits, (bitsArraySize - 1) * sizeof(uint64_t));
-    // bits_[bitsArraySize - 1] = 0;
-
-//    bits_ = bits;
-// std::cout << "poppy.init0 " << num_bits << "\n";
-
-
-    num_bits_ = num_bits;
-    num_counts_ = 0;
-
-    l1EntryCount_ = std::max(num_bits_ >> 32, (uint64_t) 1);
-    l2EntryCount_ = num_bits_ >> 11;
-    basicBlockCount_ = num_bits_ / kBasicBlockSize;
-
-    // assert(
-    posix_memalign((void **) &l1Entries_, kCacheLineSize, l1EntryCount_ * sizeof(uint64_t));
-    //  >= 0);
-    // assert(
-    posix_memalign((void **) &l2Entries_, kCacheLineSize, l2EntryCount_ * sizeof(uint64_t));
-    //  >= 0);
-
-    uint64_t l2Id = 0;
-    uint64_t basicBlockId = 0;
-
-    memset(locCount_, 0, sizeof(locCount_));
-
-    for (uint64_t i = 0; i < l1EntryCount_; i++) {
-        l1Entries_[i] = num_counts_;
-        uint32_t cum = 0;
-        for (int k = 0; k < kL2EntryCountPerL1Entry; k++) {
-            l2Entries_[l2Id] = cum;
-            for (int offset = 0; offset < 30; offset += 10) {
-                int c = popcountLinear(bits_,
-                                       basicBlockId * kWordCountPerBasicBlock,
-                                       kBasicBlockSize);
-                cum += c;
-                basicBlockId++;
-                l2Entries_[l2Id] |= (uint64_t) c << (32 + offset);
-            }
-            cum += popcountLinear(bits_, basicBlockId * kWordCountPerBasicBlock, kBasicBlockSize);
-            basicBlockId++;
-
-            if (++l2Id >= l2EntryCount_) break;
-        }
-
-        locCount_[i] = (cum + kLocFreq - 1) / kLocFreq;
-        num_counts_ += cum;
-    }
-    basicBlockId = 0;
-    for (uint64_t i = 0; i < l1EntryCount_; i++) {
-        loc_[i] = new uint32_t[locCount_[i]];
-        locCount_[i] = 0;
-
-        uint32_t oneCount = 0;
-
-        for (uint32_t k = 0; k < kBasicBlockCountPerL1Entry; k++) {
-            uint64_t woff = basicBlockId * kWordCountPerBasicBlock;
-            for (int widx = 0; widx < kWordCountPerBasicBlock; widx++)
-                for (int bit = 0; bit < kWordSize; bit++)
-                    if (bits_[woff + widx] & (1ULL << (63 - bit))) {
-                        oneCount++;
-                        if ((oneCount & kLocFreqMask) == 1) {
-                            loc_[i][locCount_[i]] = k * kBasicBlockSize + widx * kWordSize + bit;
-                            locCount_[i]++;
-                        }
-                    }
-
-            basicBlockId++;
-            if (basicBlockId >= basicBlockCount_) break;
-        }
-    }
-
-// to ensure everything is OK
-Rank9 *r = new Rank9(bits, num_bits);
-for(int i=0; i<num_bits; i++) {
-    if (r->rank(i) != rank(i)) {
-        std::cout << "rank " << i << " of " << num_bits << " r9 " << r->rank(i) << " poppy " << rank(i) << "\n";
-        break;
-    }
-}
-for(int i=0; i<num_bits; i++) {
-    if (r->get(i) != get(i)) {
-        std::cout << "get " << i << " of " << num_bits << " r9 " << r->get(i) << " poppy " << get(i) << "\n";
-        break;
-    }
-}
-delete r;
-
-}
-
-inline uint64_t Poppy::rank(uint64_t pos) {
-    // assert(pos <= num_bits_);
-//    --pos;
-//        std::cout << "poppy.rank " << pos << "\n";
-
-
-    uint64_t l1Id = pos >> 32;
-    uint64_t l2Id = pos >> 11;
-    uint64_t x = l2Entries_[l2Id];
-
-    uint64_t res = l1Entries_[l1Id] + (x & 0xFFFFFFFFULL);
-    x >>= 32;
-
-    int groupId = (pos & 2047) / 512;
-    for (int i = 0; i < groupId; i++) {
-        res += x & 1023;
-        x >>= 10;
-    }
-    res += popcountLinear(bits_, (l2Id * 4 + groupId) * kWordCountPerBasicBlock, (pos & 511));
-
-    return res;
-}
-
 inline uint64_t rotl64(uint64_t n, unsigned int c) {
     // assumes width is a power of 2
     const unsigned int mask = (CHAR_BIT * sizeof(n) - 1);
@@ -368,11 +166,7 @@ class XorFilterPlus {
   size_t arrayLength;
   size_t blockLength;
   FingerprintType *fingerprints = NULL;
-#ifdef USE_POPPY
-  Poppy *rank = NULL;
-#else
   Rank9 *rank = NULL;
-#endif
   size_t totalSizeInBytes;
 
   HashFamily* hasher;
@@ -579,11 +373,7 @@ Status XorFilterPlus<ItemType, FingerprintType, HashFamily>::AddAll(
         }
     }
     delete [] fp;
-#ifdef USE_POPPY
-    rank = new Poppy(bits, bitCount);
-#else
     rank = new Rank9(bits, bitCount);
-#endif
     delete [] bits;
     totalSizeInBytes = (2 * blockLength + setBits) * sizeof(FingerprintType)
         + rank->getBitCount() / 8;
@@ -603,18 +393,11 @@ Status XorFilterPlus<ItemType, FingerprintType, HashFamily>::Contain(
     uint32_t h1 = reduce(r1, blockLength) + blockLength;
     uint32_t h2a = reduce(r2, blockLength);
     f ^= fingerprints[h0] ^ fingerprints[h1];
-#ifdef USE_POPPY
-    if (rank->get(h2a)) {
-        uint32_t h2x = (uint32_t) rank->rank(h2a);
-        f ^= fingerprints[h2x + 2 * blockLength];
-    }
-#else
     uint64_t bitAndPartialRank = rank->getAndPartialRank(h2a);
     if ((bitAndPartialRank & 1) == 1) {
         uint32_t h2x = (uint32_t) ((bitAndPartialRank >> 1) + rank->remainingRank(h2a));
         f ^= fingerprints[h2x + 2 * blockLength];
     }
-#endif
     return f == 0 ? Ok : NotFound;
 }
 

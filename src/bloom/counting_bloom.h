@@ -15,12 +15,32 @@ using namespace hashing;
 
 namespace counting_bloomfilter {
 
+#define bitCount64(x) __builtin_popcountll(x)
+//inline int bitCount64(uint64_t x) {
+//    return __builtin_popcountll(x);
+//}
+/*
 inline int bitCount64(uint64_t x) {
     return __builtin_popcountll(x);
 }
+*/
 
+/*
+inline int select64(uint64_t k, uint64_t x) {
+  uint64_t result = uint64_t(1) << k;
+  asm("pdep %1, %0, %0\n\t"
+      "tzcnt %0, %0"
+      : "+r"(result)
+      : "r"(x));
+  return result;
+}
+*/
+//#if defined(__BMI2__)
+// use a macro, to ensure it is inlined
+#define select64(A, B) _tzcnt_u64(_pdep_u64(1ULL << (B), (A)))
+/*
+#else
 inline int select64(uint64_t x, int n) {
-#if defined(__BMI2__)
     // with this, "add" is around 310 ns/key at 10000000 keys
     // from http://bitmagic.io/rank-select.html
     // https://github.com/Forceflow/libmorton/issues/6
@@ -33,7 +53,11 @@ inline int select64(uint64_t x, int n) {
     // where the '1' was deposited
     return __builtin_ctzl(d);
     // return _tzcnt_u64(d);
-#else
+}
+*/
+//#else
+/*
+inline int select64(uint64_t x, int n) {
     // alternative implementation
     // with this, "add" is around 680 ns/key at 10000000 keys
     for(int i = 0; i < 64; i++) {
@@ -45,8 +69,142 @@ inline int select64(uint64_t x, int n) {
         x >>= 1;
     }
     return -1;
-#endif
 }
+*/
+//#endif
+
+/*
+#define ONES_STEP_4 0x1111111111111111ULL
+#define ONES_STEP_8 0x0101010101010101ULL
+#define MSBS_STEP_8 (0x80L * ONES_STEP_8)
+
+static int8_t SELECT_IN_BYTE[] = {
+    -1, 0, 1, 0, 2, 0, 1, 0, 3,
+    0, 1, 0, 2, 0, 1, 0, 4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1,
+    0, 5, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4, 0, 1, 0, 2,
+    0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 6, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1,
+    0, 2, 0, 1, 0, 4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 5,
+    0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4, 0, 1, 0, 2, 0, 1,
+    0, 3, 0, 1, 0, 2, 0, 1, 0, 7, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2,
+    0, 1, 0, 4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 5, 0, 1,
+    0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4, 0, 1, 0, 2, 0, 1, 0, 3,
+    0, 1, 0, 2, 0, 1, 0, 6, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1,
+    0, 4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 5, 0, 1, 0, 2,
+    0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1,
+    0, 2, 0, 1, 0, -1, -1, -1, 1, -1, 2, 2, 1, -1, 3, 3, 1, 3, 2, 2, 1,
+    -1, 4, 4, 1, 4, 2, 2, 1, 4, 3, 3, 1, 3, 2, 2, 1, -1, 5, 5, 1, 5, 2,
+    2, 1, 5, 3, 3, 1, 3, 2, 2, 1, 5, 4, 4, 1, 4, 2, 2, 1, 4, 3, 3, 1,
+    3, 2, 2, 1, -1, 6, 6, 1, 6, 2, 2, 1, 6, 3, 3, 1, 3, 2, 2, 1, 6, 4,
+    4, 1, 4, 2, 2, 1, 4, 3, 3, 1, 3, 2, 2, 1, 6, 5, 5, 1, 5, 2, 2, 1,
+    5, 3, 3, 1, 3, 2, 2, 1, 5, 4, 4, 1, 4, 2, 2, 1, 4, 3, 3, 1, 3, 2,
+    2, 1, -1, 7, 7, 1, 7, 2, 2, 1, 7, 3, 3, 1, 3, 2, 2, 1, 7, 4, 4, 1,
+    4, 2, 2, 1, 4, 3, 3, 1, 3, 2, 2, 1, 7, 5, 5, 1, 5, 2, 2, 1, 5, 3,
+    3, 1, 3, 2, 2, 1, 5, 4, 4, 1, 4, 2, 2, 1, 4, 3, 3, 1, 3, 2, 2, 1,
+    7, 6, 6, 1, 6, 2, 2, 1, 6, 3, 3, 1, 3, 2, 2, 1, 6, 4, 4, 1, 4, 2,
+    2, 1, 4, 3, 3, 1, 3, 2, 2, 1, 6, 5, 5, 1, 5, 2, 2, 1, 5, 3, 3, 1,
+    3, 2, 2, 1, 5, 4, 4, 1, 4, 2, 2, 1, 4, 3, 3, 1, 3, 2, 2, 1, -1, -1,
+    -1, -1, -1, -1, -1, 2, -1, -1, -1, 3, -1, 3, 3, 2, -1, -1, -1, 4,
+    -1, 4, 4, 2, -1, 4, 4, 3, 4, 3, 3, 2, -1, -1, -1, 5, -1, 5, 5, 2,
+    -1, 5, 5, 3, 5, 3, 3, 2, -1, 5, 5, 4, 5, 4, 4, 2, 5, 4, 4, 3, 4, 3,
+    3, 2, -1, -1, -1, 6, -1, 6, 6, 2, -1, 6, 6, 3, 6, 3, 3, 2, -1, 6,
+    6, 4, 6, 4, 4, 2, 6, 4, 4, 3, 4, 3, 3, 2, -1, 6, 6, 5, 6, 5, 5, 2,
+    6, 5, 5, 3, 5, 3, 3, 2, 6, 5, 5, 4, 5, 4, 4, 2, 5, 4, 4, 3, 4, 3,
+    3, 2, -1, -1, -1, 7, -1, 7, 7, 2, -1, 7, 7, 3, 7, 3, 3, 2, -1, 7,
+    7, 4, 7, 4, 4, 2, 7, 4, 4, 3, 4, 3, 3, 2, -1, 7, 7, 5, 7, 5, 5, 2,
+    7, 5, 5, 3, 5, 3, 3, 2, 7, 5, 5, 4, 5, 4, 4, 2, 5, 4, 4, 3, 4, 3,
+    3, 2, -1, 7, 7, 6, 7, 6, 6, 2, 7, 6, 6, 3, 6, 3, 3, 2, 7, 6, 6, 4,
+    6, 4, 4, 2, 6, 4, 4, 3, 4, 3, 3, 2, 7, 6, 6, 5, 6, 5, 5, 2, 6, 5,
+    5, 3, 5, 3, 3, 2, 6, 5, 5, 4, 5, 4, 4, 2, 5, 4, 4, 3, 4, 3, 3, 2,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3, -1,
+    -1, -1, -1, -1, -1, -1, 4, -1, -1, -1, 4, -1, 4, 4, 3, -1, -1, -1,
+    -1, -1, -1, -1, 5, -1, -1, -1, 5, -1, 5, 5, 3, -1, -1, -1, 5, -1,
+    5, 5, 4, -1, 5, 5, 4, 5, 4, 4, 3, -1, -1, -1, -1, -1, -1, -1, 6,
+    -1, -1, -1, 6, -1, 6, 6, 3, -1, -1, -1, 6, -1, 6, 6, 4, -1, 6, 6,
+    4, 6, 4, 4, 3, -1, -1, -1, 6, -1, 6, 6, 5, -1, 6, 6, 5, 6, 5, 5, 3,
+    -1, 6, 6, 5, 6, 5, 5, 4, 6, 5, 5, 4, 5, 4, 4, 3, -1, -1, -1, -1,
+    -1, -1, -1, 7, -1, -1, -1, 7, -1, 7, 7, 3, -1, -1, -1, 7, -1, 7, 7,
+    4, -1, 7, 7, 4, 7, 4, 4, 3, -1, -1, -1, 7, -1, 7, 7, 5, -1, 7, 7,
+    5, 7, 5, 5, 3, -1, 7, 7, 5, 7, 5, 5, 4, 7, 5, 5, 4, 5, 4, 4, 3, -1,
+    -1, -1, 7, -1, 7, 7, 6, -1, 7, 7, 6, 7, 6, 6, 3, -1, 7, 7, 6, 7, 6,
+    6, 4, 7, 6, 6, 4, 6, 4, 4, 3, -1, 7, 7, 6, 7, 6, 6, 5, 7, 6, 6, 5,
+    6, 5, 5, 3, 7, 6, 6, 5, 6, 5, 5, 4, 6, 5, 5, 4, 5, 4, 4, 3, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5, -1, -1, -1, -1, -1,
+    -1, -1, 5, -1, -1, -1, 5, -1, 5, 5, 4, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, 6, -1, -1, -1, -1, -1, -1, -1, 6,
+    -1, -1, -1, 6, -1, 6, 6, 4, -1, -1, -1, -1, -1, -1, -1, 6, -1, -1,
+    -1, 6, -1, 6, 6, 5, -1, -1, -1, 6, -1, 6, 6, 5, -1, 6, 6, 5, 6, 5,
+    5, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    7, -1, -1, -1, -1, -1, -1, -1, 7, -1, -1, -1, 7, -1, 7, 7, 4, -1,
+    -1, -1, -1, -1, -1, -1, 7, -1, -1, -1, 7, -1, 7, 7, 5, -1, -1, -1,
+    7, -1, 7, 7, 5, -1, 7, 7, 5, 7, 5, 5, 4, -1, -1, -1, -1, -1, -1,
+    -1, 7, -1, -1, -1, 7, -1, 7, 7, 6, -1, -1, -1, 7, -1, 7, 7, 6, -1,
+    7, 7, 6, 7, 6, 6, 4, -1, -1, -1, 7, -1, 7, 7, 6, -1, 7, 7, 6, 7, 6,
+    6, 5, -1, 7, 7, 6, 7, 6, 6, 5, 7, 6, 6, 5, 6, 5, 5, 4, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, 5, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, 6, -1, -1, -1, -1, -1, -1, -1, 6, -1, -1,
+    -1, 6, -1, 6, 6, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, 7, -1, -1, -1, -1, -1, -1, -1, 7, -1, -1, -1, 7, -1, 7, 7, 5,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7, -1,
+    -1, -1, -1, -1, -1, -1, 7, -1, -1, -1, 7, -1, 7, 7, 6, -1, -1, -1,
+    -1, -1, -1, -1, 7, -1, -1, -1, 7, -1, 7, 7, 6, -1, -1, -1, 7, -1,
+    7, 7, 6, -1, 7, 7, 6, 7, 6, 6, 5, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7, -1, -1, -1, -1, -1, -1,
+    -1, 7, -1, -1, -1, 7, -1, 7, 7, 6, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, 7
+};
+
+inline int select64(uint64_t x, int n) {
+    uint64_t byteSums = x - ((x & 0xa * ONES_STEP_4) >> 1);
+    byteSums = (byteSums & 3 * ONES_STEP_4) +
+            ((byteSums >> 2) & 3 * ONES_STEP_4);
+    byteSums = (byteSums + (byteSums >> 4)) & 0x0f * ONES_STEP_8;
+    byteSums *= ONES_STEP_8;
+    // Phase 2: compare each byte sum with rank to obtain the relevant byte
+    uint64_t rankStep8 = n * ONES_STEP_8;
+    int byteOffset = (int) (((((rankStep8 | MSBS_STEP_8) - byteSums) & MSBS_STEP_8) >> 7) *
+            ONES_STEP_8 >> 53) &
+            ~0x7;
+    int byteRank = (int) (n - (((byteSums << 8) >> byteOffset) & 0xFF));
+    return byteOffset +
+            SELECT_IN_BYTE[(int) ((x >> byteOffset) & 0xFF) | byteRank << 8];
+}
+*/
 
 inline int numberOfLeadingZeros64(uint64_t x) {
     // If x is 0, the result is undefined.
@@ -471,7 +629,6 @@ Status SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless, HashFami
 
 // SuccinctCountingBlockedBloomFilter --------------------------------------------------------------------------------------
 
-
 // #define VERIFY_COUNT
 
 template <typename ItemType, size_t bits_per_item, typename HashFamily,
@@ -492,6 +649,9 @@ private:
   void Increment(size_t group, int bit);
   void Decrement(size_t group, int bit);
   int ReadCount(size_t group, int bit);
+#ifdef VERIFY_COUNT
+  void VerifyCount(size_t group, int bit, int line);
+#endif
 
 public:
   explicit SuccinctCountingBlockedBloomFilter(const int capacity);
@@ -618,13 +778,24 @@ void SuccinctCountingBlockedBloomFilter<ItemType, bits_per_item, HashFamily, k>:
         counts[group] = c;
     }
 #ifdef VERIFY_COUNT
-    for(int b = 0; b < 64; b++) {
-        if (realCount[(group << 6) + b] != ReadCount(group, b)) {
-            ::std::cout << "group " << group << "/" << b << " of " << bit << "\n";
-        }
-    }
+    VerifyCount(group, bit, __LINE__);
 #endif
 }
+
+#ifdef VERIFY_COUNT
+template <typename ItemType, size_t bits_per_item, typename HashFamily, int k>
+void SuccinctCountingBlockedBloomFilter<ItemType, bits_per_item, HashFamily, k>::
+    VerifyCount(size_t group, int bit, int line) {
+    for(int b = 0; b < 64; b++) {
+        if (realCount[(group << 6) + b] != ReadCount(group, b)) {
+            ::std::cout << "group " << group << " bit " << b <<
+            " expected " << (int) realCount[(group << 6) + b] <<
+            " got " << ReadCount(group, b) <<
+            " at bit " << bit << " at line " << line << "\n";
+        }
+    }
+}
+#endif
 
 template <typename ItemType, size_t bits_per_item, typename HashFamily, int k>
 int SuccinctCountingBlockedBloomFilter<ItemType, bits_per_item, HashFamily, k>::
@@ -713,16 +884,405 @@ void SuccinctCountingBlockedBloomFilter<ItemType, bits_per_item, HashFamily, k>:
         data[group] = m & ~(removed << bit);
     }
 #ifdef VERIFY_COUNT
-    for(int b = 0; b < 64; b++) {
-        if (realCount[(group << 6) + b] != ReadCount(group, b)) {
-            ::std::cout << "group- " << group << "/" << b << " of " << bit << "\n";
-        }
-    }
+    VerifyCount(group, bit, __LINE__);
 #endif
 }
 
 template <typename ItemType, size_t bits_per_item, typename HashFamily, int k>
 bool SuccinctCountingBlockedBloomFilter<ItemType, bits_per_item, HashFamily, k>::
+    Contain(const uint64_t key) const noexcept {
+  const auto hash = hasher(key);
+  const uint32_t bucket_start = reduce(rotl64(hash, 32), bucketCount) * 8;
+  uint32_t a = (uint32_t)hash;
+  char ok = 1;
+  if (k >= 3) {
+    ok &= data[bucket_start + ((a >> 0) & 7)] >> ((a >> 3) & 0x3f);
+    ok &= data[bucket_start + ((a >> 9) & 7)] >> ((a >> 12) & 0x3f);
+    ok &= data[bucket_start + ((a >> 18) & 7)] >> ((a >> 21) & 0x3f);
+  }
+  if (!ok) {
+    return ok;
+  }
+  uint32_t b = (uint32_t)(hash >> 32);
+  for (int i = 3; i < k; i++) {
+    a += b;
+    ok &= data[bucket_start + (a & 7)] >> ((a >> 3) & 63);
+    if (!ok) {
+      return ok;
+    }
+  }
+  return ok;
+}
+
+
+// SuccinctCountingBlockedBloomRankFilter --------------------------------------------------------------------------------------
+
+// #define VERIFY_COUNT
+
+template <typename ItemType, size_t bits_per_item, typename HashFamily,
+          int k = (int)((double)bits_per_item * 0.693147180559945 + 0.5)>
+class SuccinctCountingBlockedBloomRankFilter {
+private:
+  const int bucketCount;
+  HashFamily hasher;
+  uint64_t *data;
+  uint64_t *counts;
+  uint64_t *overflow;
+  size_t overflowLength;
+  size_t nextFreeOverflow;
+#ifdef VERIFY_COUNT
+  uint8_t *realCount;
+#endif
+
+  void Increment(size_t group, int bit);
+  void Decrement(size_t group, int bit);
+  int ReadCount(size_t group, int bit);
+#ifdef VERIFY_COUNT
+  void VerifyCount(size_t group, int bit, int line);
+#endif
+
+public:
+  explicit SuccinctCountingBlockedBloomRankFilter(const int capacity);
+  ~SuccinctCountingBlockedBloomRankFilter() noexcept;
+  void Add(const uint64_t key) noexcept;
+  void Remove(const uint64_t key) noexcept;
+  bool Contain(const uint64_t key) const noexcept;
+  uint64_t SizeInBytes() const {
+      return 2 * 64 * bucketCount + 8 * overflowLength;
+  }
+};
+
+template <typename ItemType, size_t bits_per_item, typename HashFamily, int k>
+SuccinctCountingBlockedBloomRankFilter<ItemType, bits_per_item, HashFamily, k>::
+    SuccinctCountingBlockedBloomRankFilter(const int capacity)
+    : bucketCount(capacity * bits_per_item / 512), hasher() {
+  const size_t alloc_size = bucketCount * (512 / 8);
+  const int malloc_failed =
+      posix_memalign(reinterpret_cast<void **>(&data), 64, alloc_size);
+  if (malloc_failed)
+    throw ::std::bad_alloc();
+  memset(data, 0, alloc_size);
+  size_t arrayLength = bucketCount * 8;
+  overflowLength = 100 + arrayLength / 100 * 36;
+  counts = new uint64_t[arrayLength]();
+  overflow = new uint64_t[overflowLength]();
+#ifdef VERIFY_COUNT
+  realCount = new uint8_t[arrayLength * 64]();
+#endif
+  nextFreeOverflow = 0;
+  for (size_t i = 0; i < overflowLength; i += 8) {
+      overflow[i] = i + 8;
+  }
+}
+
+template <typename ItemType, size_t bits_per_item, typename HashFamily, int k>
+SuccinctCountingBlockedBloomRankFilter<ItemType, bits_per_item, HashFamily, k>::
+    ~SuccinctCountingBlockedBloomRankFilter() noexcept {
+  free(data);
+  delete[] counts;
+  delete[] overflow;
+}
+
+template <typename ItemType, size_t bits_per_item, typename HashFamily, int k>
+void SuccinctCountingBlockedBloomRankFilter<ItemType, bits_per_item, HashFamily, k>::
+    Add(const uint64_t key) noexcept {
+  const auto hash = hasher(key);
+  const uint32_t bucket_start = reduce(rotl64(hash, 32), bucketCount) * 8;
+  uint32_t a = (uint32_t)hash;
+  if (k >= 3) {
+    Increment(bucket_start + ((a >> 0) & 7), (a >> 3) & 0x3f);
+    Increment(bucket_start + ((a >> 9) & 7), (a >> 12) & 0x3f);
+    Increment(bucket_start + ((a >> 18) & 7), (a >> 21) & 0x3f);
+//    data[bucket_start + ((a >> 0) & 7)] |= 1ULL << ((a >> 3) & 0x3f);
+//    data[bucket_start + ((a >> 9) & 7)] |= 1ULL << ((a >> 12) & 0x3f);
+//    data[bucket_start + ((a >> 18) & 7)] |= 1ULL << ((a >> 21) & 0x3f);
+  }
+  uint32_t b = (uint32_t)(hash >> 32);
+  for (int i = 3; i < k; i++) {
+    a += b;
+    Increment(bucket_start + (a & 7), (a >> 3) & 0x3f);
+//    data[bucket_start + (a & 7)] |= 1ULL << ((a >> 3) & 0x3f);
+  }
+}
+
+inline uint64_t getBit(int index) {
+    return 1L << (index * 8);
+}
+
+template <typename ItemType, size_t bits_per_item, typename HashFamily, int k>
+void SuccinctCountingBlockedBloomRankFilter<ItemType, bits_per_item, HashFamily, k>::
+    Increment(size_t group, int x) {
+#ifdef VERIFY_COUNT
+    realCount[(group << 6) + x]++;
+#endif
+    uint64_t m = data[group];
+    uint64_t c = counts[group];
+    if ((c & 0x8000000000000000ULL) != 0) {
+        // already an overflow
+        size_t index = (int) (c & 0x0fffffff);
+        c += 1L << 32;
+        counts[group] = c;
+        size_t bitIndex = x & 63;
+        overflow[index + bitIndex / 8] += getBit(bitIndex);
+        data[group] |= (1L << x);
+#ifdef VERIFY_COUNT
+        VerifyCount(group, x, __LINE__);
+#endif
+        return;
+    }
+    uint64_t d = (m >> x) & 1;
+    if (d == 0 && c == 0) {
+        data[group] |= 1L << x;
+        return;
+    }
+    int bitsSet = bitCount64(m);
+    int bitsBefore = x == 0 ? 0 : bitCount64(m << (64 - x));
+    int insertAt = bitsBefore;
+    if (d == 1) {
+        int startLevel = 0;
+        uint64_t bitsForLevel;
+        while (true) {
+            uint64_t levelMask = ((1L << bitsSet) - 1) << startLevel;
+            bitsForLevel = c & levelMask;
+            if (((c >> insertAt) & 1) == 0) {
+                break;
+            }
+            startLevel += bitsSet;
+            if (startLevel >= 64) {
+                // convert to overflow later
+                insertAt = 64;
+                break;
+            }
+            bitsSet = bitCount64(bitsForLevel);
+            bitsBefore = insertAt == 0 ? 0 : bitCount64(bitsForLevel << (64 - insertAt));
+            insertAt = startLevel + bitsBefore;
+        }
+        // bit is not set: set it, and insert a space in the next level if needed
+        c |= 1L << insertAt;
+        int bitsBeforeLevel = insertAt == 0 ? 0 : bitCount64(bitsForLevel << (64 - insertAt));
+        int bitsSetLevel = bitCount64(bitsForLevel);
+        insertAt = startLevel + bitsSet + bitsBeforeLevel;
+        bitsSet = bitsSetLevel;
+    }
+    // insert a space
+    uint64_t mask = (1L << insertAt) - 1;
+    uint64_t left = c & ~mask;
+    uint64_t right = c & mask;
+    c = (left << 1) | right;
+    if (insertAt >= 64 || (c & 0x8000000000000000L) != 0) {
+        // an overflow entry, or overflowing now
+        // int index = allocateOverflow();
+        int index = nextFreeOverflow;
+        nextFreeOverflow = (int) overflow[index];
+        for (int i = 0; i < 8; i++) {
+            overflow[index + i] = 0;
+        }
+        // convert to a pointer
+        uint64_t count = 1;
+        for (int i = 0; i < 64; i++) {
+            int n = ReadCount(group, i);
+            count += n;
+            overflow[index + i / 8] += n * getBit(i);
+        }
+        c = 0x8000000000000000L | (count << 32) | index;
+        data[group] |= 1L << x;
+        counts[group] = c;
+        int bitIndex = x & 63;
+        overflow[index + bitIndex / 8] += getBit(bitIndex);
+#ifdef VERIFY_COUNT
+        VerifyCount(group, x, __LINE__);
+#endif
+        return;
+    }
+    data[group] |= 1L << x;
+    counts[group] = c;
+#ifdef VERIFY_COUNT
+    VerifyCount(group, x, __LINE__);
+#endif
+}
+
+#ifdef VERIFY_COUNT
+template <typename ItemType, size_t bits_per_item, typename HashFamily, int k>
+void SuccinctCountingBlockedBloomRankFilter<ItemType, bits_per_item, HashFamily, k>::
+    VerifyCount(size_t group, int bit, int line) {
+    for(int b = 0; b < 64; b++) {
+        if (realCount[(group << 6) + b] != ReadCount(group, b)) {
+            ::std::cout << "group " << group << " bit " << b <<
+            " expected " << (int) realCount[(group << 6) + b] <<
+            " got " << ReadCount(group, b) <<
+            " at bit " << bit << " at line " << line << "\n";
+        }
+    }
+}
+#endif
+
+template <typename ItemType, size_t bits_per_item, typename HashFamily, int k>
+int SuccinctCountingBlockedBloomRankFilter<ItemType, bits_per_item, HashFamily, k>::
+    ReadCount(size_t group, int x) {
+    uint64_t m = data[group];
+    uint64_t d = (m >> x) & 1;
+    if (d == 0) {
+        return 0;
+    }
+    uint64_t c = counts[group];
+    if ((c & 0x8000000000000000L) != 0) {
+        int index = (int) (c & 0x0fffffff);
+        int bitIndex = x & 63;
+        uint64_t n = overflow[index + bitIndex / 8];
+        n >>= 8 * (bitIndex & 7);
+        return (int) (n & 0xff);
+    }
+    if (c == 0) {
+        return 1;
+    }
+    int bitsSet = bitCount64(m);
+    x &= 63;
+    int bitsBefore = x == 0 ? 0 : bitCount64(m << (64 - x));
+    int count = 1;
+    int insertAt = bitsBefore;
+    while (true) {
+        // the mask for the current level
+        uint64_t levelMask = (1L << bitsSet) - 1;
+        // the relevant bits for the current level
+        uint64_t bitsForLevel = c & levelMask;
+        if (((c >> insertAt) & 1) == 1) {
+            count++;
+            // at this level, the bit is already set: loop until it's not set
+            c >>= bitsSet;
+            bitsSet = bitCount64(bitsForLevel);
+            bitsBefore = insertAt == 0 ? 0 : bitCount64(bitsForLevel << (64 - insertAt));
+            insertAt = bitsBefore;
+        } else {
+            break;
+        }
+        if (count > 16) {
+            // unexpected
+            ::std::cout << "group- " << group << " count " << count << "\n";
+        }
+    }
+    return count;
+}
+
+template <typename ItemType, size_t bits_per_item, typename HashFamily, int k>
+void SuccinctCountingBlockedBloomRankFilter<ItemType, bits_per_item, HashFamily, k>::
+    Remove(const uint64_t key) noexcept {
+  const auto hash = hasher(key);
+  const uint32_t bucket_start = reduce(rotl64(hash, 32), bucketCount) * 8;
+  uint32_t a = (uint32_t)hash;
+  if (k >= 3) {
+    Decrement(bucket_start + ((a >> 0) & 7), (a >> 3) & 0x3f);
+    Decrement(bucket_start + ((a >> 9) & 7), (a >> 12) & 0x3f);
+    Decrement(bucket_start + ((a >> 18) & 7), (a >> 21) & 0x3f);
+  }
+  uint32_t b = (uint32_t)(hash >> 32);
+  for (int i = 3; i < k; i++) {
+    a += b;
+    Decrement(bucket_start + (a & 7), (a >> 3) & 0x3f);
+  }
+}
+
+template <typename ItemType, size_t bits_per_item, typename HashFamily, int k>
+void SuccinctCountingBlockedBloomRankFilter<ItemType, bits_per_item, HashFamily, k>::
+    Decrement(size_t group, int x) {
+#ifdef VERIFY_COUNT
+    realCount[(group << 6) + x]--;
+#endif
+    uint64_t m = data[group];
+    uint64_t c = counts[group];
+    if ((c & 0x8000000000000000L) != 0) {
+        // an overflow entry
+        int count = (int) (c >> 32) & 0x0fffffff;
+        c -= 1L << 32;
+        counts[group] = c;
+        int index = (int) (c & 0x0fffffff);
+        int bitIndex = x & 63;
+        uint64_t n = overflow[index + bitIndex / 8];
+        overflow[index + bitIndex / 8] = n - getBit(bitIndex);
+        n >>= 8 * (bitIndex & 7);
+        if ((n & 0xff) == 1) {
+            data[group] &= ~(1L << x);
+        }
+        if (count < 64) {
+            // convert back to an inline entry, and free up the overflow entry
+            int temp[64];
+            int count2 = 0;
+            for(int j = 0; j < 64; j++) {
+                int cj = (int) ((overflow[index + j / 8] >> (8 * (j & 7))) & 0xff);
+                count2 += cj;
+                temp[j] = cj;
+            }
+            uint64_t c2 = 0;
+            int off = 0;
+            while (count2 > 0) {
+                for (int i = 0; i < 64; i++) {
+                    int t = temp[i];
+                    if (t > 0) {
+                        temp[i]--;
+                        count2--;
+                        c2 |= ((t > 1) ? 1L : 0L) << off;
+                        off++;
+                    }
+                }
+            }
+            counts[group] = c2;
+            // freeOverflow(index);
+            overflow[index] = nextFreeOverflow;
+            nextFreeOverflow = index;
+#ifdef VERIFY_COUNT
+            VerifyCount(group, x, __LINE__);
+#endif
+        }
+        return;
+    }
+    // number of bits in the counter at this level
+    int bitsSet = bitCount64(m);
+    // number of bits before the bit to test (at the current level)
+    int bitsBefore = x == 0 ? 0 : bitCount64(m << (64 - x));
+    // the point where the bit should be removed (remove 0), or reset
+    int removeAt = bitsBefore;
+    uint64_t d = (c >> bitsBefore) & 1;
+    if (d == 1) {
+        // bit is set: loop until it's not set
+        int startLevel = 0;
+        uint64_t bitsForLevel;
+        int resetAt = removeAt;
+        while (true) {
+            // the mask for the current level
+            uint64_t levelMask = ((1L << bitsSet) - 1) << startLevel;
+            // the relevant bits for the current level
+            bitsForLevel = c & levelMask;
+            if (((c >> removeAt) & 1) == 0) {
+                break;
+            }
+            // at this level, the bit is already set: loop until it's not set
+            startLevel += bitsSet;
+            bitsSet = bitCount64(bitsForLevel);
+            bitsBefore = removeAt == 0 ? 0 : bitCount64(bitsForLevel << (64 - removeAt));
+            resetAt = removeAt;
+            removeAt = startLevel + bitsBefore;
+            if (removeAt > 63) {
+                break;
+            }
+        }
+        c ^= 1L << resetAt;
+    }
+    if (removeAt < 64) {
+        // remove the bit from the counter
+        uint64_t mask = (1L << removeAt) - 1;
+        uint64_t left = (c >> 1) & ~mask;
+        uint64_t right= c & mask;
+        c = left | right;
+    }
+    counts[group] = c;
+    // possibly reset the data bit
+    data[group] = m & ~((d==0?1L:0L) << x);
+#ifdef VERIFY_COUNT
+    VerifyCount(group, x, __LINE__);
+#endif
+}
+
+template <typename ItemType, size_t bits_per_item, typename HashFamily, int k>
+bool SuccinctCountingBlockedBloomRankFilter<ItemType, bits_per_item, HashFamily, k>::
     Contain(const uint64_t key) const noexcept {
   const auto hash = hasher(key);
   const uint32_t bucket_start = reduce(rotl64(hash, 32), bucketCount) * 8;
