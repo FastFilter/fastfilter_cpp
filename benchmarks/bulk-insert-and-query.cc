@@ -33,6 +33,7 @@
 #include "xorfilter_2n.h"
 #include "xorfilter_plus.h"
 #include "xorfilter_singleheader.h"
+#include "xor_fuse_filter.h"
 #include "bloom.h"
 #include "counting_bloom.h"
 #include "gcs.h"
@@ -54,6 +55,7 @@ using namespace xorfilter;
 using namespace xorfilter2;
 using namespace xorfilter2n;
 using namespace xorfilter_plus;
+using namespace xorfusefilter;
 using namespace bloomfilter;
 using namespace counting_bloomfilter;
 using namespace gcsfilter;
@@ -298,6 +300,24 @@ struct FilterAPI<SimdBlockFilterFixed<HashFamily>> {
 template <typename ItemType, typename FingerprintType>
 struct FilterAPI<XorFilter<ItemType, FingerprintType>> {
   using Table = XorFilter<ItemType, FingerprintType>;
+  static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
+  static void Add(uint64_t key, Table* table) {
+    throw std::runtime_error("Unsupported");
+  }
+  static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table* table) {
+    table->AddAll(keys, start, end);
+  }
+  static void Remove(uint64_t key, Table * table) {
+    throw std::runtime_error("Unsupported");
+  }
+  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
+    return (0 == table->Contain(key));
+  }
+};
+
+template <typename ItemType, typename FingerprintType>
+struct FilterAPI<XorFuseFilter<ItemType, FingerprintType>> {
+  using Table = XorFuseFilter<ItemType, FingerprintType>;
   static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
   static void Add(uint64_t key, Table* table) {
     throw std::runtime_error("Unsupported");
@@ -981,6 +1001,8 @@ int main(int argc, char * argv[]) {
     {70, "Xor8-singleheader"},
     {80, "Morton"},
 
+    {90, "XorFuse8"},
+
     // Sort
     {100, "Sort"},
   };
@@ -1449,6 +1471,15 @@ int main(int argc, char * argv[]) {
   if (algorithmId == a || (algos.find(a) != algos.end())) {
       auto cf = FilterBenchmark<
           MortonFilter>(
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
+      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
+  }
+
+  // Xor Fuse Filter ----------------------------------------------------------
+  a = 90;
+  if (algorithmId == a || algorithmId < 0 || (algos.find(a) != algos.end())) {
+      auto cf = FilterBenchmark<
+          XorFuseFilter<uint64_t, uint8_t>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
       cout << setw(NAME_WIDTH) << names[a] << cf << endl;
   }
