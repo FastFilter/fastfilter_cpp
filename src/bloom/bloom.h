@@ -174,7 +174,7 @@ template <typename ItemType, size_t bits_per_item, bool branchless,
           typename HashFamily, int k>
 Status BloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::AddAll(
     const ItemType* keys, const size_t start, const size_t end) {
-  // we have that AddAll assumes that arrayLength << 6 is a 
+  // we have that AddAll assumes that arrayLength << 6 is a
   // 32-bit integer
   if(arrayLength > 0x3ffffff) {
     for(size_t i = start; i < end; i++) {
@@ -188,7 +188,7 @@ Status BloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::AddAll(
   for (size_t i = start; i < end; i++) {
     uint64_t key = keys[i];
     uint64_t hash = hasher(key);
-    uint64_t a = (hash >> 32) | (hash << 32);;
+    uint64_t a = (hash >> 32) | (hash << 32);
     uint64_t b = hash;
     for (int j = 0; j < k; j++) {
       int index = fastrangesize(a, this->arrayLength);
@@ -219,7 +219,7 @@ template <typename ItemType, size_t bits_per_item, bool branchless,
 Status BloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::Contain(
     const ItemType &key) const {
   uint64_t hash = hasher(key);
-  uint64_t a = (hash >> 32) | (hash << 32);;
+  uint64_t a = (hash >> 32) | (hash << 32);
   uint64_t b = hash;
   if (branchless && k >= 3) {
     int b0 = data[fastrangesize(a, this->arrayLength)] >> (a & 63);
