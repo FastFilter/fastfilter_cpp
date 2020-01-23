@@ -31,9 +31,14 @@ inline uint32_t reduce(uint32_t hash, uint32_t n) {
     return (uint32_t) (((uint64_t) hash * n) >> 32);
 }
 
-size_t getHashFromHash(uint64_t hash, int index, int blockLength) {
-    uint32_t r = rotl64(hash, index * 21);
-    return (size_t) reduce(r, blockLength) + index * blockLength;
+const size_t segmentLengthBits = 13;
+const size_t segmentLength = 1 << segmentLengthBits;
+
+size_t getHashFromHash(uint64_t hash, int index, int segmentCount) {
+    __uint128_t x = (__uint128_t) hash * (__uint128_t) segmentCount;
+    int seg = (uint64_t)(x >> 64);
+    int h = (seg + index) * segmentLength + (size_t)((hash >> (index * segmentLengthBits)) & (segmentLength - 1));
+    return h;
 }
 
 template <typename ItemType, typename FingerprintType,
@@ -43,7 +48,7 @@ class XorFuseFilter {
 
   size_t size;
   size_t arrayLength;
-  size_t blockLength;
+  size_t segmentCount;
   FingerprintType *fingerprints;
 
   HashFamily* hasher;
@@ -55,8 +60,11 @@ class XorFuseFilter {
   explicit XorFuseFilter(const size_t size) {
     hasher = new HashFamily();
     this->size = size;
-    this->arrayLength = 32 + 1.23 * size;
-    this->blockLength = arrayLength / 3;
+    size_t capacity = size / 0.879;
+    capacity = (capacity + 3 - 1) / 3 * 3;
+    capacity = (capacity + segmentLength - 1) / segmentLength * segmentLength;
+    this->segmentCount = capacity / segmentLength;
+    this->arrayLength = (segmentCount + 2) * segmentLength;
     fingerprints = new FingerprintType[arrayLength]();
     std::fill_n(fingerprints, arrayLength, 0);
   }
@@ -134,14 +142,14 @@ Status XorFuseFilter<ItemType, FingerprintType, HashFamily>::AddAll(
     t2val_t * t2vals = new t2val_t[m];
     while (true) {
         memset(t2vals, 0, sizeof(t2val_t[m]));
-        int blocks = 1 + ((3 * blockLength) >> blockShift);
+        int blocks = 1 + (arrayLength >> blockShift);
         uint64_t* tmp = new uint64_t[blocks << blockShift];
         int* tmpc = new int[blocks]();
         for(size_t i = start; i < end; i++) {
             uint64_t k = keys[i];
             uint64_t hash = (*hasher)(k);
             for (int hi = 0; hi < 3; hi++) {
-                int index = getHashFromHash(hash, hi, blockLength);
+                int index = getHashFromHash(hash, hi, segmentCount);
                 int b = index >> blockShift;
                 int i2 = tmpc[b];
                 tmp[(b << blockShift) + i2] = hash;
@@ -222,7 +230,7 @@ Status XorFuseFilter<ItemType, FingerprintType, HashFamily>::AddAll(
             }
             long hash = t2vals[i].t2;
             for (int hi = 0; hi < 3; hi++) {
-                int h = getHashFromHash(hash, hi, blockLength);
+                int h = getHashFromHash(hash, hi, segmentCount);
                 if (h == i) {
                     found = (uint8_t) hi;
                     t2vals[i].t2count = 0;
@@ -253,7 +261,6 @@ Status XorFuseFilter<ItemType, FingerprintType, HashFamily>::AddAll(
         std::cout << "WARNING: hashIndex " << hashIndex << "\n";
         if (hashIndex >= 0) {
             std::cout << (end - start) << " keys; arrayLength " << arrayLength
-                << " blockLength " << blockLength
                 << " reverseOrderPos " << reverseOrderPos << "\n";
         }
 
@@ -275,7 +282,7 @@ Status XorFuseFilter<ItemType, FingerprintType, HashFamily>::AddAll(
         // unless the other two entries are already occupied
         FingerprintType xor2 = fingerprint(hash);
         for (int hi = 0; hi < 3; hi++) {
-            size_t h = getHashFromHash(hash, hi, blockLength);
+            size_t h = getHashFromHash(hash, hi, segmentCount);
             if (found == hi) {
                 change = h;
             } else {
@@ -299,12 +306,11 @@ Status XorFuseFilter<ItemType, FingerprintType, HashFamily>::Contain(
     const ItemType &key) const {
     uint64_t hash = (*hasher)(key);
     FingerprintType f = fingerprint(hash);
-    uint32_t r0 = (uint32_t) hash;
-    uint32_t r1 = (uint32_t) rotl64(hash, 21);
-    uint32_t r2 = (uint32_t) rotl64(hash, 42);
-    uint32_t h0 = reduce(r0, blockLength);
-    uint32_t h1 = reduce(r1, blockLength) + blockLength;
-    uint32_t h2 = reduce(r2, blockLength) + 2 * blockLength;
+    __uint128_t x = (__uint128_t) hash * (__uint128_t) segmentCount;
+    int seg = (uint64_t)(x >> 64);
+    int h0 = (seg + 0) * segmentLength + (size_t)((hash >> (0 * segmentLengthBits)) & (segmentLength - 1));
+    int h1 = (seg + 1) * segmentLength + (size_t)((hash >> (1 * segmentLengthBits)) & (segmentLength - 1));
+    int h2 = (seg + 2) * segmentLength + (size_t)((hash >> (2 * segmentLengthBits)) & (segmentLength - 1));
     f ^= fingerprints[h0] ^ fingerprints[h1] ^ fingerprints[h2];
     return f == 0 ? Ok : NotFound;
 }
