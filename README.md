@@ -83,9 +83,9 @@ Steps to run the tests and analyze the results:
     ./benchmark.sh
 
     cd ../..
-    cd fastfilter_java
+    cd fastfilter_java/fastfilter
     mvn clean install
-    java -cp target/test-classes org.fastfilter.analysis.AnalyzeResults ../fastfilter_cpp/benchmarks/benchmark-results.txt
+    java -cp target/test-classes org.fastfilter.analysis.AnalyzeResults ../../fastfilter_cpp/benchmarks/benchmark-results.txt
 
 
 ## Where is your code?
