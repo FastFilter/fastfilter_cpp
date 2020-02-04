@@ -398,8 +398,7 @@ SimdBlockFilterFixed<HashFamily>::Find(const uint64_t key) const noexcept {
 /// 16-byte version (not very good)
 ///////////////////////////////////////////////////////////////////
 
-#ifdef __SSSE3__
-
+#ifdef __SSE41__
 template<typename HashFamily = ::hashing::TwoIndependentMultiplyShift>
 class SimdBlockFilterFixed16 {
  private:
@@ -446,7 +445,7 @@ SimdBlockFilterFixed16<HashFamily>::~SimdBlockFilterFixed16() noexcept {
   directory_ = nullptr;
 }
 
-
+#include <tmmintrin.h>
 template <typename HashFamily>
 [[gnu::always_inline]] inline __m128i
 SimdBlockFilterFixed16<HashFamily>::MakeMask(const uint64_t hash) noexcept {
@@ -471,7 +470,7 @@ SimdBlockFilterFixed16<HashFamily>::Add(const uint64_t key) noexcept {
   bucketvalue = _mm_or_si128(bucketvalue, mask);
   _mm_storeu_si128(bucket,bucketvalue);
 }
-
+#include <smmintrin.h>
 template <typename HashFamily>
 [[gnu::always_inline]] inline bool
 SimdBlockFilterFixed16<HashFamily>::Find(const uint64_t key) const noexcept {
@@ -483,4 +482,4 @@ SimdBlockFilterFixed16<HashFamily>::Find(const uint64_t key) const noexcept {
   return _mm_testc_si128(bucketvalue,mask);
 }
 
-#endif // #ifdef __SSSE3__
+#endif // #ifdef __SSE41__

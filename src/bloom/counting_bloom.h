@@ -6,9 +6,9 @@
 
 #include "hashutil.h"
 
-#if defined(__BMI2__)
+#if defined(__BMI2__) // the code won't compile with BMI2
+#define  HAVE_COUNTING_BLOOM
 #include <immintrin.h>
-#endif
 
 using namespace std;
 using namespace hashing;
@@ -1308,4 +1308,5 @@ bool SuccinctCountingBlockedBloomRankFilter<ItemType, bits_per_item, HashFamily,
 }
 
 }
+#endif // BMI2
 #endif

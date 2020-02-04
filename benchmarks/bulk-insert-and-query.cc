@@ -57,7 +57,9 @@ using namespace xorfilter2n;
 using namespace xorfilter_plus;
 using namespace xorfusefilter;
 using namespace bloomfilter;
+#ifdef HAVE_COUNTING_BLOOM
 using namespace counting_bloomfilter;
+#endif
 using namespace gcsfilter;
 using namespace CompressedCuckoo; // Morton filter namespace
 #ifdef __AVX2__
@@ -645,7 +647,7 @@ struct FilterAPI<BloomFilter<ItemType, bits_per_item, branchless, HashFamily>> {
     return (0 == table->Contain(key));
   }
 };
-
+#ifdef HAVE_COUNTING_BLOOM
 template <typename ItemType, size_t bits_per_item, bool branchless, typename HashFamily>
 struct FilterAPI<CountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily>> {
   using Table = CountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily>;
@@ -720,6 +722,7 @@ struct FilterAPI<SuccinctCountingBlockedBloomRankFilter<ItemType, bits_per_item,
   }
 };
 
+#endif // counting bloom
 // assuming that first1,last1 and first2, last2 are sorted,
 // this tries to find out how many of first1,last1 can be
 // found in first2, last2, this includes duplicates
@@ -988,16 +991,17 @@ int main(int argc, char * argv[]) {
     {52, "BlockedBloom (addall)"},
     {53, "BlockedBloom64"},
 #endif
-#ifdef __SSSE3__
+#ifdef __SSE41__
     {54, "BlockedBloom16"},
 #endif
 
+#ifdef HAVE_COUNTING_BLOOM
     // Counting Bloom
     {60, "CountingBloom10 (addall)"},
     {61, "SuccCountingBloom10 (addall)"},
     {62, "SuccCountBlockBloom10"},
     {63, "SuccCountBlockBloomRank10"},
-
+#endif
     {70, "Xor8-singleheader"},
     {80, "Morton"},
 
@@ -1420,7 +1424,7 @@ int main(int argc, char * argv[]) {
       cout << setw(NAME_WIDTH) << names[a] << cf << endl;
   }
 #endif
-#ifdef __SSSE3__
+#ifdef __SSE41__
   a = 54;
   if (algorithmId == a || (algos.find(a) != algos.end())) {
       auto cf = FilterBenchmark<SimdBlockFilterFixed16<SimpleMixSplit>>(
@@ -1428,7 +1432,7 @@ int main(int argc, char * argv[]) {
       cout << setw(NAME_WIDTH) << names[a] << cf << endl;
   }
 #endif
-
+#ifdef HAVE_COUNTING_BLOOM
   // Counting Bloom ----------------------------------------------------------
   a = 60;
   if (algorithmId == a || (algos.find(a) != algos.end())) {
@@ -1458,7 +1462,7 @@ int main(int argc, char * argv[]) {
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, false, true);
       cout << setw(NAME_WIDTH) << names[a] << cf << endl;
   }
-
+#endif
   a = 70;
   if (algorithmId == a || (algos.find(a) != algos.end())) {
       auto cf = FilterBenchmark<
