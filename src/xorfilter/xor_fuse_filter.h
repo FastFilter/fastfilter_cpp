@@ -31,13 +31,20 @@ inline uint32_t reduce(uint32_t hash, uint32_t n) {
     return (uint32_t) (((uint64_t) hash * n) >> 32);
 }
 
+// #define H128
 const size_t segmentLengthBits = 13;
 const size_t segmentLength = 1 << segmentLengthBits;
 
 size_t getHashFromHash(uint64_t hash, int index, int segmentCount) {
+#ifdef H128
     __uint128_t x = (__uint128_t) hash * (__uint128_t) segmentCount;
     int seg = (uint64_t)(x >> 64);
-    int h = (seg + index) * segmentLength + (size_t)((hash >> (index * segmentLengthBits)) & (segmentLength - 1));
+    uint64_t hh = hash;
+#else
+    uint64_t seg = reduce(hash, segmentCount);
+    uint64_t hh = (hash ^ (hash >> 32));
+#endif
+    int h = (seg + index) * segmentLength + (size_t)((hh >> (index * segmentLengthBits)) & (segmentLength - 1));
     return h;
 }
 
@@ -54,7 +61,8 @@ class XorFuseFilter {
   HashFamily* hasher;
 
   inline FingerprintType fingerprint(const uint64_t hash) const {
-    return (FingerprintType) hash ^ (hash >> 32);
+    return (FingerprintType) hash;
+    // return (FingerprintType) hash ^ (hash >> 32);
   }
 
   explicit XorFuseFilter(const size_t size) {
@@ -306,11 +314,17 @@ Status XorFuseFilter<ItemType, FingerprintType, HashFamily>::Contain(
     const ItemType &key) const {
     uint64_t hash = (*hasher)(key);
     FingerprintType f = fingerprint(hash);
+#ifdef H128
     __uint128_t x = (__uint128_t) hash * (__uint128_t) segmentCount;
     int seg = (uint64_t)(x >> 64);
-    int h0 = (seg + 0) * segmentLength + (size_t)((hash >> (0 * segmentLengthBits)) & (segmentLength - 1));
-    int h1 = (seg + 1) * segmentLength + (size_t)((hash >> (1 * segmentLengthBits)) & (segmentLength - 1));
-    int h2 = (seg + 2) * segmentLength + (size_t)((hash >> (2 * segmentLengthBits)) & (segmentLength - 1));
+    uint64_t hh = hash;
+#else
+    uint64_t seg = reduce(hash, segmentCount);
+    uint64_t hh = (hash ^ (hash >> 32));
+#endif
+    int h0 = (seg + 0) * segmentLength + (size_t)((hh >> (0 * segmentLengthBits)) & (segmentLength - 1));
+    int h1 = (seg + 1) * segmentLength + (size_t)((hh >> (1 * segmentLengthBits)) & (segmentLength - 1));
+    int h2 = (seg + 2) * segmentLength + (size_t)((hh >> (2 * segmentLengthBits)) & (segmentLength - 1));
     f ^= fingerprints[h0] ^ fingerprints[h1] ^ fingerprints[h2];
     return f == 0 ? Ok : NotFound;
 }
