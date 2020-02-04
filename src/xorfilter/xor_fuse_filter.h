@@ -31,7 +31,7 @@ inline uint32_t reduce(uint32_t hash, uint32_t n) {
     return (uint32_t) (((uint64_t) hash * n) >> 32);
 }
 
-// #define H128
+#define H128
 const size_t segmentLengthBits = 13;
 const size_t segmentLength = 1 << segmentLengthBits;
 
