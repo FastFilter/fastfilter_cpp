@@ -16,46 +16,14 @@ using namespace hashing;
 namespace counting_bloomfilter {
 
 #define bitCount64(x) __builtin_popcountll(x)
-//inline int bitCount64(uint64_t x) {
-//    return __builtin_popcountll(x);
-//}
-/*
-inline int bitCount64(uint64_t x) {
-    return __builtin_popcountll(x);
-}
-*/
 
-/*
-inline int select64(uint64_t k, uint64_t x) {
-  uint64_t result = uint64_t(1) << k;
-  asm("pdep %1, %0, %0\n\t"
-      "tzcnt %0, %0"
-      : "+r"(result)
-      : "r"(x));
-  return result;
-}
-*/
-//#if defined(__BMI2__)
+#if defined(__BMI2__)
+
 // use a macro, to ensure it is inlined
 #define select64(A, B) _tzcnt_u64(_pdep_u64(1ULL << (B), (A)))
-/*
+
 #else
-inline int select64(uint64_t x, int n) {
-    // with this, "add" is around 310 ns/key at 10000000 keys
-    // from http://bitmagic.io/rank-select.html
-    // https://github.com/Forceflow/libmorton/issues/6
-    // This is a rather unusual usage of the pdep (bit deposit) operation,
-    // as we use the x as the mask, and we use n as the value.
-    // We deposit (move) the bits of 1 << n to the locations
-    // defined by x.
-    uint64_t d = _pdep_u64(1ULL << n, x);
-    // and now we count the trailing zeroes, to find out
-    // where the '1' was deposited
-    return __builtin_ctzl(d);
-    // return _tzcnt_u64(d);
-}
-*/
-//#else
+
 /*
 inline int select64(uint64_t x, int n) {
     // alternative implementation
@@ -71,9 +39,15 @@ inline int select64(uint64_t x, int n) {
     return -1;
 }
 */
-//#endif
 
 /*
+
+From https://github.com/splatlab/Sux
+https://github.com/splatlab/Sux/blob/master/testselect64.cpp
+
+*/
+
+
 #define ONES_STEP_4 0x1111111111111111ULL
 #define ONES_STEP_8 0x0101010101010101ULL
 #define MSBS_STEP_8 (0x80L * ONES_STEP_8)
@@ -204,7 +178,8 @@ inline int select64(uint64_t x, int n) {
     return byteOffset +
             SELECT_IN_BYTE[(int) ((x >> byteOffset) & 0xFF) | byteRank << 8];
 }
-*/
+
+#endif
 
 inline int numberOfLeadingZeros64(uint64_t x) {
     // If x is 0, the result is undefined.
