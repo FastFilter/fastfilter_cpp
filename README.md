@@ -10,7 +10,7 @@ Reference: [Xor Filters: Faster and Smaller Than Bloom and Cuckoo Filters](https
 
 
 
-## Prerequisites
+## Prerequisites_fastfilter
 
 - A  C++11 compiler such as GNU G++ or LLVM Clang++
 - Make
