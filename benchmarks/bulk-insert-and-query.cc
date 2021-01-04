@@ -1309,7 +1309,7 @@ int main(int argc, char * argv[]) {
 
   // Bloom ----------------------------------------------------------
   a = 40;
-  if (algorithmId == a || algorithmId < 0 || (algos.find(a) != algos.end())) {
+  if (algorithmId == a  || (algos.find(a) != algos.end())) {
       auto cf = FilterBenchmark<
           BloomFilter<uint64_t, 8, false, SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed);
@@ -1351,7 +1351,7 @@ int main(int argc, char * argv[]) {
       cout << setw(NAME_WIDTH) << names[a] << cf << endl;
   }
   a = 46;
-  if (algorithmId == a  || algorithmId < 0 || (algos.find(a) != algos.end())) {
+  if (algorithmId == a  || (algos.find(a) != algos.end())) {
       auto cf = FilterBenchmark<
           BloomFilter<uint64_t, 8, true, SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
