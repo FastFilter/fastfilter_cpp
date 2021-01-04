@@ -8,14 +8,10 @@ CXXFLAGS += -fno-strict-aliasing -Wall -std=c++11 -I. -I../src/ \
     $(OPT)
 
 UNAME_P := $(shell uname -p)
-ifeq ($(UNAME_P),aarch64)
-        CXXFLAGS +=
+ifeq ($(UNAME_P),x86_64)
+        CXXFLAGS += -march=native
 else
-ifeq ($(UNAME_P),unknown)
         CXXFLAGS +=
-else
-	CXXFLAGS += -march=native
-endif
 endif
 
 LDFLAGS = -Wall

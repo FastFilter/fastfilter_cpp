@@ -1349,21 +1349,21 @@ int main(int argc, char * argv[]) {
       cout << setw(NAME_WIDTH) << names[a] << cf << endl;
   }
   a = 46;
-  if (algorithmId == a || (algos.find(a) != algos.end())) {
+  if (algorithmId == a  || algorithmId < 0 || (algos.find(a) != algos.end())) {
       auto cf = FilterBenchmark<
           BloomFilter<uint64_t, 8, true, SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
       cout << setw(NAME_WIDTH) << names[a] << cf << endl;
   }
   a = 47;
-  if (algorithmId == a || (algos.find(a) != algos.end())) {
+  if (algorithmId == a  || algorithmId < 0 || (algos.find(a) != algos.end())) {
       auto cf = FilterBenchmark<
           BloomFilter<uint64_t, 12, true, SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
       cout << setw(NAME_WIDTH) << names[a] << cf << endl;
   }
   a = 48;
-  if (algorithmId == a || (algos.find(a) != algos.end())) {
+  if (algorithmId == a  || algorithmId < 0 || (algos.find(a) != algos.end())) {
       auto cf = FilterBenchmark<
           BloomFilter<uint64_t, 16, true, SimpleMixSplit>>(
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
