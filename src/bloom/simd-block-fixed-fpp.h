@@ -398,7 +398,7 @@ SimdBlockFilterFixed<HashFamily>::Find(const uint64_t key) const noexcept {
 /// 16-byte version (not very good)
 ///////////////////////////////////////////////////////////////////
 
-#ifdef __SSE41__
+#ifdef __SSE4_1__
 
 #include <smmintrin.h>
 

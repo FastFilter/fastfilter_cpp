@@ -253,28 +253,6 @@ struct FilterAPI<SimdBlockFilterFixed64<HashFamily>> {
   }
 };
 
-
-template <typename HashFamily>
-struct FilterAPI<SimdBlockFilterFixed16<HashFamily>> {
-  using Table = SimdBlockFilterFixed16<HashFamily>;
-  static Table ConstructFromAddCount(size_t add_count) {
-    Table ans(ceil(add_count * 8.0 / CHAR_BIT));
-    return ans;
-  }
-  static void Add(uint64_t key, Table* table) {
-    table->Add(key);
-  }
-  static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
-    throw std::runtime_error("Unsupported");
-  }
-  static void Remove(uint64_t key, Table * table) {
-    throw std::runtime_error("Unsupported");
-  }
-  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
-    return table->Find(key);
-  }
-};
-
 template <typename HashFamily>
 struct FilterAPI<SimdBlockFilterFixed<HashFamily>> {
   using Table = SimdBlockFilterFixed<HashFamily>;
@@ -297,6 +275,30 @@ struct FilterAPI<SimdBlockFilterFixed<HashFamily>> {
 };
 #endif
 
+
+#ifdef __SSE4_1__
+
+template <typename HashFamily>
+struct FilterAPI<SimdBlockFilterFixed16<HashFamily>> {
+  using Table = SimdBlockFilterFixed16<HashFamily>;
+  static Table ConstructFromAddCount(size_t add_count) {
+    Table ans(ceil(add_count * 8.0 / CHAR_BIT));
+    return ans;
+  }
+  static void Add(uint64_t key, Table* table) {
+    table->Add(key);
+  }
+  static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
+    throw std::runtime_error("Unsupported");
+  }
+  static void Remove(uint64_t key, Table * table) {
+    throw std::runtime_error("Unsupported");
+  }
+  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
+    return table->Find(key);
+  }
+};
+#endif
 template <typename ItemType, typename FingerprintType>
 struct FilterAPI<XorFilter<ItemType, FingerprintType>> {
   using Table = XorFilter<ItemType, FingerprintType>;
@@ -988,7 +990,7 @@ int main(int argc, char * argv[]) {
     {52, "BlockedBloom (addall)"},
     {53, "BlockedBloom64"},
 #endif
-#ifdef __SSE41__
+#ifdef __SSE4_1__
     {54, "BlockedBloom16"},
 #endif
 
@@ -1420,7 +1422,7 @@ int main(int argc, char * argv[]) {
       cout << setw(NAME_WIDTH) << names[a] << cf << endl;
   }
 #endif
-#ifdef __SSE41__
+#ifdef __SSE4_1__
   a = 54;
   if (algorithmId == a || (algos.find(a) != algos.end())) {
       auto cf = FilterBenchmark<SimdBlockFilterFixed16<SimpleMixSplit>>(
