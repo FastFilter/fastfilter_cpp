@@ -1004,6 +1004,7 @@ int main(int argc, char * argv[]) {
     {80, "Morton"},
 
     {90, "XorFuse8"},
+    {91, "XorFuse16"},
 
     // Sort
     {100, "Sort"},
@@ -1485,7 +1486,13 @@ int main(int argc, char * argv[]) {
           add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
       cout << setw(NAME_WIDTH) << names[a] << cf << endl;
   }
-
+  a = 91;
+  if (algorithmId == a || algorithmId < 0 || (algos.find(a) != algos.end())) {
+      auto cf = FilterBenchmark<
+          XorFuseFilter<uint64_t, uint16_t>>(
+          add_count, to_add, distinct_add, to_lookup, distinct_lookup, intersectionsize, hasduplicates, mixed_sets, seed, true);
+      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
+  }
   // Sort ----------------------------------------------------------
   a = 100;
   if (algorithmId == a || algorithmId < 0 || (algos.find(a) != algos.end())) {
