@@ -93,6 +93,21 @@ void reservoirsampling(T *storage, uint32_t capacity, const T* x_begin, const T*
   }
 }
 
+
+// good old Fisher-Yates shuffle, shuffling an array of integers, without
+// division
+template <typename T>
+void fast_shuffle(T *storage, uint64_t size, __uint128_t* seed) {
+  uint64_t i;
+  for (i = size; i > 1; i--) {
+    uint64_t nextpos = random_bounded(i, seed);
+    T tmp = storage[i - 1];   // likely in cache
+    T val = storage[nextpos]; // could be costly
+    storage[i - 1] = val;
+    storage[nextpos] = tmp; // you might have to read this store later
+  }
+}
+
 // Using two pointer ranges for sequences x and y, create a vector clone of x but for
 // y_probability y's mixed in.
 template <typename T>
@@ -106,5 +121,8 @@ template <typename T>
   size_t howmanyx = x_size - howmanyy;
   reservoirsampling(result.data(), howmanyx,  x_begin, x_end, &seed);
   reservoirsampling(result.data() + howmanyx, howmanyy,  y_begin, y_end, &seed);
+  if((y_probability != 0.0) && (y_probability != 1.0)) { fast_shuffle(result.data(), result.size(), &seed); }
   return result;
 }
+
+
