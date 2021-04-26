@@ -53,7 +53,11 @@ public:
     temp_result_vec.resize(num_events * 2 + 1);
   }
 
-  ~LinuxEvents() { close(fd); }
+  ~LinuxEvents() {
+      // This solution expects that the fds are increasing numbers without
+      // gaps. Certainly this is not always true.
+      for (int i = fd; fd - num_events - i != 0; i--) { close(i); }
+  }
 
   inline void start() {
     if (ioctl(fd, PERF_EVENT_IOC_RESET, PERF_IOC_FLAG_GROUP) == -1) {
