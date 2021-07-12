@@ -296,7 +296,7 @@ SimpleBlockFilter<blocksize, k, HashFamily>::SimpleBlockFilter(
 
 template <size_t blocksize, int k, typename HashFamily>
 SimpleBlockFilter<blocksize, k, HashFamily>::~SimpleBlockFilter() noexcept {
-  free(data);
+  delete[] data;
   data = nullptr;
 }
 
