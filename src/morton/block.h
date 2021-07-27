@@ -165,7 +165,6 @@ struct Block{ // Assuming block size is a multiple of atom_t's size in bytes
       // How many bits spilled over into atom1
       uint16_t spillover = (global_index + field_width_bits) % atom_size_bits;
       spillover = (atom1 - atom0) ? spillover : 0; // Compare and swap ins?
-      //std::cout << "Spillover is " << spillover << std::endl;
 
       // May be different than the default read mask if field_width_bits 
       // differs from what is stored in the struct
@@ -402,7 +401,6 @@ struct Block{ // Assuming block size is a multiple of atom_t's size in bytes
       memcpy(source_address, &item, field_width_bytes);
     }
 
-    __attribute__((optimize("unroll-loops")))
     INLINE void add_cross_left_displace(uint64_t raw_offset_bits, 
       uint64_t field_width_bits, uint64_t index, atom_t item){
       uint64_t global_index = index * field_width_bits + raw_offset_bits;
@@ -420,8 +418,6 @@ struct Block{ // Assuming block size is a multiple of atom_t's size in bytes
       for(uint64_t atom = 1; atom < atoms_per_block; atom++){
         shifted_block._block_storage[atom] |= _block_storage[atom - 1] >> (atom_size_bits - field_width_bits);
       } 
-      //std::cout << "Block before shift: " << block_storage_as_bit_string(entry_size_bits)  << std::endl;
-      //std::cout << "Block after shift: " << shifted_block.block_storage_as_bit_string(entry_size_bits) << std::endl;
 
       // Clear the entire atom
       constexpr atom_t full_clear_mask = static_cast<atom_t>(0);
@@ -482,8 +478,6 @@ struct Block{ // Assuming block size is a multiple of atom_t's size in bytes
       for(uint64_t atom = 1; atom < atoms_per_block; atom++){
         shifted_block._block_storage[atom - 1] |= _block_storage[atom] << (atom_size_bits - field_width_bits);
       } 
-      //std::cout << "Block before shift: " << block_storage_as_bit_string(entry_size_bits)  << std::endl;
-      //std::cout << "Block after shift: " << shifted_block.block_storage_as_bit_string(entry_size_bits) << std::endl;
 
       // What follows is a merge operation that is exactly the same as 
       // what appears in add_cross_left_displace

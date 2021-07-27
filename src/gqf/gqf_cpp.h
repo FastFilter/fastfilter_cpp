@@ -25,7 +25,7 @@ enum Status {
 };
 
 template <typename ItemType, size_t bits_per_item,
-    typename HashFamily = TwoIndependentMultiplyShift>
+    typename HashFamily = SimpleMixSplit>
 class GQFilter {
 
   QF qf;
@@ -49,16 +49,10 @@ class GQFilter {
     uint64_t nhashbits = qbits + 8;
     mask = (1ULL << nhashbits) - 1;
 
-// std::cout << "(CQF: nslots " << nslots << " nhashbits " << nhashbits << " n " << n << " bitsPerItem " << bitsPerItem << ")\n";
-
-// if (!qf_malloc(&qf, nslots, nhashbits, 0, QF_HASH_INVERTIBLE, 0)) {
-//    if (!qf_malloc(&qf, nslots, nhashbits, 0, QF_HASH_DEFAULT, 0)) {
     if (!qf_malloc(&qf, nslots, nhashbits, 0, QF_HASH_NONE, 0)) {
         std::cout << "Can't allocate CQF.\n";
         abort();
     }
-
-    // qf_set_auto_resize(&qf, true);
 
     bytesUsed = qf.metadata->total_size_in_bytes;
     bitsPerItem = (double) bytesUsed / n;
