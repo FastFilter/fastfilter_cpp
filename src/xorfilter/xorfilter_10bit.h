@@ -16,7 +16,7 @@ size_t getHashFromHash10(uint64_t hash, int index, int blockLength) {
     return (size_t) reduce(r, blockLength);
 }
 
-template <typename ItemType, typename HashFamily = TwoIndependentMultiplyShift>
+template <typename ItemType, typename HashFamily = SimpleMixSplit>
 class XorFilter10 {
 
   size_t size;
@@ -44,7 +44,7 @@ class XorFilter10 {
     delete hasher;
   }
 
-  Status AddAll(const vector<ItemType> data, const size_t start, const size_t end);
+  Status AddAll(const vector<ItemType>& data, const size_t start, const size_t end);
 
   // Report if the item is inserted, with false positive rate.
   Status Contain(const ItemType &item) const;
@@ -58,7 +58,7 @@ class XorFilter10 {
 
 template <typename ItemType, typename HashFamily>
 Status XorFilter10<ItemType, HashFamily>::AddAll(
-    const vector<ItemType> keys, const size_t start, const size_t end) {
+    const vector<ItemType>& keys, const size_t start, const size_t end) {
 
     int m = arrayLength;
     uint64_t* reverseOrder = new uint64_t[size];
@@ -180,51 +180,8 @@ Status XorFilter10<ItemType, HashFamily>::AddAll(
         delete[] tmpc;
         delete[] alone;
 
-/*
-
-        int* alone = new int[arrayLength];
-        int alonePos = 0;
-        for (size_t i = 0; i < arrayLength; i++) {
-            if (t2vals[i].t2count == 1) {
-                alone[alonePos++] = i;
-            }
-        }
-        reverseOrderPos = 0;
-        while (alonePos > 0 && reverseOrderPos < size) {
-            int i = alone[--alonePos];
-            if (t2vals[i].t2count == 0) {
-                continue;
-            }
-            long hash = t2vals[i].t2;
-            uint8_t found = -1;
-            for (int hi = 0; hi < 3; hi++) {
-                int h = getHashFromHash(hash, hi, blockLength);
-                int newCount =  --t2vals[h].t2count;
-                if (newCount == 0) {
-                    found = (uint8_t) hi;
-                } else {
-                    if (newCount == 1) {
-                        alone[alonePos++] = h;
-                    }
-                    t2vals[h].t2 ^= hash;
-                }
-            }
-            reverseOrder[reverseOrderPos] = hash;
-            reverseH[reverseOrderPos] = found;
-            reverseOrderPos++;
-        }
-        delete [] alone;
-*/
-
         if (reverseOrderPos == size) {
             break;
-        }
-
-        std::cout << "WARNING: hashIndex " << hashIndex << "\n";
-        if (hashIndex >= 0) {
-            std::cout << (end - start) << " keys; arrayLength " << arrayLength
-                << " blockLength " << blockLength
-                << " reverseOrderPos " << reverseOrderPos << "\n";
         }
 
         hashIndex++;

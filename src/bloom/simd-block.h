@@ -25,7 +25,7 @@
 using uint32_t = ::std::uint32_t;
 using uint64_t = ::std::uint64_t;
 
-template<typename HashFamily = ::hashing::TwoIndependentMultiplyShift>
+template<typename HashFamily = ::hashing::SimpleMixSplit>
 class SimdBlockFilter {
  private:
   // The filter is divided up into Buckets:

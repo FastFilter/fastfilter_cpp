@@ -235,7 +235,7 @@ inline uint32_t MultiStageMonotoneList_get(const MultiStageMonotoneList* list, u
 }
 
 template <typename ItemType, size_t bits_per_item,
-          typename HashFamily = TwoIndependentMultiplyShift>
+          typename HashFamily = SimpleMixSplit>
 class GcsFilter {
 
   int golombShift;
@@ -252,7 +252,7 @@ class GcsFilter {
   double BitsPerItem() const { return 8.0; }
 
  public:
-  explicit GcsFilter(const size_t len) : hasher() {
+  explicit GcsFilter(const size_t ) : hasher() {
   }
 
   ~GcsFilter() {
@@ -260,7 +260,7 @@ class GcsFilter {
     delete[] monotoneList.data;
   }
 
-  Status AddAll(const vector<ItemType> data, const size_t start, const size_t end);
+  Status AddAll(const vector<ItemType>& data, const size_t start, const size_t end);
 
   // Report if the item is inserted, with false positive rate.
   Status Contain(const ItemType &item) const;
@@ -285,7 +285,7 @@ int compare_uint64(const void* a, const void* b) {
 template <typename ItemType, size_t bits_per_item,
           typename HashFamily>
 Status GcsFilter<ItemType, bits_per_item, HashFamily>::AddAll(
-    const vector<ItemType> keys, const size_t start, const size_t end) {
+    const vector<ItemType>& keys, const size_t start, const size_t end) {
 
     int len = end - start;
     // this was found experimentally

@@ -50,8 +50,6 @@ Author: Alex D. Breslow
 #define INLINE __attribute__((always_inline)) inline
 #endif
 
-#define UNROLL __attribute__((optimize("unroll-loops")))
-
 struct Tester; // Forward declaration
 std::ostream& operator<<(std::ostream& os, __uint128_t integer);
 
@@ -780,7 +778,6 @@ namespace CompressedCuckoo{
 
   // Exclusive reduction on counters that are one or more bits
   // wide but which fit into a 64-bit word
-  //UNROLL
   INLINE uint16_t exclusive_reduce_with_popcount64(const block_t& b,
     uint8_t counter_index) const{
     constexpr atom_t one = 1;
@@ -797,7 +794,6 @@ namespace CompressedCuckoo{
     // about.
     counters &= mask;
     atom_t popcount_mask = _popcount_masks[0];
-    //#pragma unroll
     for(uint8_t i = 0; i < _fullness_counter_width; i++){
       sum += __builtin_popcountll(counters & popcount_mask) << i;
       popcount_mask <<= 1;
@@ -1780,7 +1776,6 @@ namespace CompressedCuckoo{
     }
 
     if(_handle_conflicts && conflict_vector.any()){
-      //std::cout << "CONFLICT exists!\n";
       for(uint32_t i = 0; i < batch_size; i++){
         statuses[offset + i] = first_level_store(bucket_ids_1[i],
           fingerprints[i], c1[i]);
@@ -1848,7 +1843,6 @@ namespace CompressedCuckoo{
     }
 
     if(__builtin_expect(_handle_conflicts && conflict_vector.any(), 0)){
-      //std::cout << "CONFLICT exists!\n";
       for(uint32_t i = 0; i < batch_size; i++){
         statuses[offset + i] = first_level_store(bucket_ids[i],
           fingerprints[i], c1[i]);
@@ -2162,7 +2156,7 @@ namespace CompressedCuckoo{
 
   // Set OTA bit on overflow if not already set
   inline void set_overflow_status(const hash_t bucket_id,
-    const atom_t fingerprint, const hash_t block_id, const hash_t lbi){
+    const atom_t fingerprint, const hash_t block_id, const hash_t){
     // Bloom filter
     if(_use_bloom_ota){ // Not yet implemented for selective Morton filter
       return set_bloom_filter_ota(bucket_id, fingerprint, block_id);
@@ -2311,7 +2305,6 @@ namespace CompressedCuckoo{
       } // End of block overflow resolution
       count ++;
     } // End of while loop
-    //std::cout << "MAX LOOP COUNT EXCEEDED\n";
     // If you exit the while loop here, it means that the max count has been
     // exceeded.
     return false;

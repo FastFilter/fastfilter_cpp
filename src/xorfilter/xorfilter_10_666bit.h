@@ -20,7 +20,7 @@ const __uint128_t invFingerMul = 11351842506898185L;
 // (1<<64) / fingerMul2
 const __uint128_t invFingerMul2 = 6985749235014L;
 
-template <typename ItemType, typename HashFamily = TwoIndependentMultiplyShift>
+template <typename ItemType, typename HashFamily = SimpleMixSplit>
 class XorFilter10_666 {
 
   size_t size;
@@ -48,7 +48,7 @@ class XorFilter10_666 {
     delete hasher;
   }
 
-  Status AddAll(const vector<ItemType> data, const size_t start, const size_t end);
+  Status AddAll(const vector<ItemType>& data, const size_t start, const size_t end);
 
   // Report if the item is inserted, with false positive rate.
   Status Contain(const ItemType &item) const;
@@ -65,13 +65,9 @@ int getFinger(uint32_t x, int i) {
         return x;
     }
     if (i == 1) {
-//        return (double) x / fingerMul;
-//        return x >> 10;
         return (int) (((__uint128_t) x * (invFingerMul + 1)) >> 64);
     }
     if (i == 2) {
-//        return (double) x / fingerMul2;
-//        return x >> 20;
         return (int) (((__uint128_t) x * (invFingerMul2 + 1)) >> 64);
     }
     exit(0);
@@ -79,7 +75,7 @@ int getFinger(uint32_t x, int i) {
 
 template <typename ItemType, typename HashFamily>
 Status XorFilter10_666<ItemType, HashFamily>::AddAll(
-    const vector<ItemType> keys, const size_t start, const size_t end) {
+    const vector<ItemType>& keys, const size_t start, const size_t end) {
 
     int m = arrayLength;
     uint64_t* reverseOrder = new uint64_t[size];
@@ -239,13 +235,6 @@ Status XorFilter10_666<ItemType, HashFamily>::AddAll(
 
         if (reverseOrderPos == size) {
             break;
-        }
-
-        std::cout << "WARNING: hashIndex " << hashIndex << "\n";
-        if (hashIndex >= 0) {
-            std::cout << (end - start) << " keys; arrayLength " << arrayLength
-                << " blockLength " << blockLength
-                << " reverseOrderPos " << reverseOrderPos << "\n";
         }
 
         hashIndex++;

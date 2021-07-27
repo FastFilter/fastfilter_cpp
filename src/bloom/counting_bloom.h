@@ -201,7 +201,7 @@ inline uint32_t reduce(uint32_t hash, uint32_t n) {
 // CountingBloomFilter --------------------------------------------------------------------------------------
 
 template <typename ItemType, size_t bits_per_item, bool branchless,
-          typename HashFamily = TwoIndependentMultiplyShift,
+          typename HashFamily = SimpleMixSplit,
           int k = (int)((double)bits_per_item * 0.693147180559945 + 0.5)>
 class CountingBloomFilter {
 
@@ -221,7 +221,7 @@ public:
   }
   ~CountingBloomFilter() { delete[] data; }
   Status Add(const ItemType &item);
-  Status AddAll(const vector<ItemType> data, const size_t start, const size_t end);
+  Status AddAll(const vector<ItemType>& data, const size_t start, const size_t end);
   Status Remove(const ItemType &item);
   Status Contain(const ItemType &item) const;
   size_t SizeInBytes() const { return arrayLength * 8; }
@@ -255,7 +255,7 @@ void CountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::
 template <typename ItemType, size_t bits_per_item, bool branchless,
           typename HashFamily, int k>
 Status CountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::
-    AddAll(const vector<ItemType> keys, const size_t start, const size_t end) {
+    AddAll(const vector<ItemType>& keys, const size_t start, const size_t end) {
   int blocks = 1 + arrayLength / blockLen;
   uint32_t *tmp = new uint32_t[blocks * blockLen];
   int *tmpLen = new int[blocks]();
@@ -323,7 +323,7 @@ Status CountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::
 // #define VERIFY_COUNT
 
 template <typename ItemType, size_t bits_per_item, bool branchless,
-          typename HashFamily = TwoIndependentMultiplyShift,
+          typename HashFamily = SimpleMixSplit,
           int k = (int)((double)bits_per_item * 0.693147180559945 + 0.5)>
 class SuccinctCountingBloomFilter {
 
@@ -363,7 +363,7 @@ public:
   }
   ~SuccinctCountingBloomFilter() { delete[] data; delete[] counts; delete[] overflow; }
   Status Add(const ItemType &item);
-  Status AddAll(const vector<ItemType> data, const size_t start, const size_t end);
+  Status AddAll(const vector<ItemType>& data, const size_t start, const size_t end);
   Status Remove(const ItemType &item);
   Status Contain(const ItemType &item) const;
   size_t SizeInBytes() const { return arrayLength * 8 * 2 + overflowLength * 8; }
@@ -413,7 +413,7 @@ Status SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless, HashFami
 template <typename ItemType, size_t bits_per_item, bool branchless,
           typename HashFamily, int k>
 Status SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::
-    AddAll(const vector<ItemType> keys, const size_t start, const size_t end) {
+    AddAll(const vector<ItemType>& keys, const size_t start, const size_t end) {
   int blocks = 1 + arrayLength / blockLen;
   uint32_t *tmp = new uint32_t[blocks * blockLen];
   int *tmpLen = new int[blocks]();
@@ -968,15 +968,11 @@ void SuccinctCountingBlockedBloomRankFilter<ItemType, bits_per_item, HashFamily,
     Increment(bucket_start + ((a >> 0) & 7), (a >> 3) & 0x3f);
     Increment(bucket_start + ((a >> 9) & 7), (a >> 12) & 0x3f);
     Increment(bucket_start + ((a >> 18) & 7), (a >> 21) & 0x3f);
-//    data[bucket_start + ((a >> 0) & 7)] |= 1ULL << ((a >> 3) & 0x3f);
-//    data[bucket_start + ((a >> 9) & 7)] |= 1ULL << ((a >> 12) & 0x3f);
-//    data[bucket_start + ((a >> 18) & 7)] |= 1ULL << ((a >> 21) & 0x3f);
   }
   uint32_t b = (uint32_t)(hash >> 32);
   for (int i = 3; i < k; i++) {
     a += b;
     Increment(bucket_start + (a & 7), (a >> 3) & 0x3f);
-//    data[bucket_start + (a & 7)] |= 1ULL << ((a >> 3) & 0x3f);
   }
 }
 
@@ -1046,7 +1042,6 @@ void SuccinctCountingBlockedBloomRankFilter<ItemType, bits_per_item, HashFamily,
     c = (left << 1) | right;
     if (insertAt >= 64 || (c & 0x8000000000000000L) != 0) {
         // an overflow entry, or overflowing now
-        // int index = allocateOverflow();
         int index = nextFreeOverflow;
         nextFreeOverflow = (int) overflow[index];
         for (int i = 0; i < 8; i++) {

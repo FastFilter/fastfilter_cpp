@@ -159,7 +159,7 @@ void applyBlock(uint64_t* tmp, int b, int len, t2val_t * t2vals) {
 }
 
 template <typename ItemType, typename FingerprintType,
-          typename HashFamily = TwoIndependentMultiplyShift>
+          typename HashFamily = SimpleMixSplit>
 class XorFilterPlus {
 
   size_t size;
@@ -305,12 +305,6 @@ Status XorFilterPlus<ItemType, FingerprintType, HashFamily>::AddAll(
             break;
         }
 
-        std::cout << "WARNING: hashIndex " << hashIndex << "\n";
-        if (hashIndex >= 0) {
-            std::cout << (end - start) << " keys; arrayLength " << arrayLength
-                << " blockLength " << blockLength
-                << " reverseOrderPos " << reverseOrderPos << "\n";
-        }
 
         hashIndex++;
 

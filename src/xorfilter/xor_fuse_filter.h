@@ -49,7 +49,7 @@ size_t getHashFromHash(uint64_t hash, int index, int segmentCount) {
 }
 
 template <typename ItemType, typename FingerprintType,
-          typename HashFamily = TwoIndependentMultiplyShift>
+          typename HashFamily = SimpleMixSplit>
 class XorFuseFilter {
  public:
 

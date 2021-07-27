@@ -85,14 +85,14 @@ static inline size_t fastrangesize(uint64_t word, size_t p) {
 #endif // SIZE_MAX == UINT32_MAX
 }
 
-static size_t getBestK(size_t bitsPerItem) {
+static inline size_t getBestK(size_t bitsPerItem) {
   return max(1, (int)round((double)bitsPerItem * log(2)));
 }
 
 inline uint64_t getBit(uint32_t index) { return 1L << (index & 63); }
 
 template <typename ItemType, size_t bits_per_item, bool branchless,
-          typename HashFamily = TwoIndependentMultiplyShift,
+          typename HashFamily = SimpleMixSplit,
           int k = (int)((double)bits_per_item * 0.693147180559945 + 0.5)>
 class BloomFilter {
 public:
@@ -121,7 +121,7 @@ public:
   Status Add(const ItemType &item);
 
   // Add multiple items to the filter.
-  Status AddAll(const vector<ItemType> data, const size_t start,
+  Status AddAll(const vector<ItemType>& data, const size_t start,
                 const size_t end) {
     return AddAll(data.data(),start,end);
 
@@ -269,7 +269,7 @@ BloomFilter<ItemType, bits_per_item, branchless, HashFamily, k>::Info() const {
  ***************/
 
 template <size_t blocksize, int k,
-          typename HashFamily = ::hashing::TwoIndependentMultiplyShift>
+          typename HashFamily = ::hashing::SimpleMixSplit>
 class SimpleBlockFilter {
 private:
   const size_t arrayLength;
@@ -296,7 +296,7 @@ SimpleBlockFilter<blocksize, k, HashFamily>::SimpleBlockFilter(
 
 template <size_t blocksize, int k, typename HashFamily>
 SimpleBlockFilter<blocksize, k, HashFamily>::~SimpleBlockFilter() noexcept {
-  delete[] data;
+  free(data);
   data = nullptr;
 }
 

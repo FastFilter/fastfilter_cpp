@@ -276,7 +276,7 @@ struct FilterAPI<SimdBlockFilterFixed<HashFamily>> {
 #endif
 
 
-#ifdef __SSE4_1__
+#ifdef __SSE41__
 
 template <typename HashFamily>
 struct FilterAPI<SimdBlockFilterFixed16<HashFamily>> {
@@ -990,7 +990,7 @@ int main(int argc, char * argv[]) {
     {52, "BlockedBloom (addall)"},
     {53, "BlockedBloom64"},
 #endif
-#ifdef __SSE4_1__
+#ifdef __SSE41__
     {54, "BlockedBloom16"},
 #endif
 
@@ -1423,7 +1423,7 @@ int main(int argc, char * argv[]) {
       cout << setw(NAME_WIDTH) << names[a] << cf << endl;
   }
 #endif
-#ifdef __SSE4_1__
+#ifdef __SSE41__
   a = 54;
   if (algorithmId == a || (algos.find(a) != algos.end())) {
       auto cf = FilterBenchmark<SimdBlockFilterFixed16<SimpleMixSplit>>(

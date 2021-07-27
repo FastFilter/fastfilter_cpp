@@ -41,7 +41,7 @@ static inline uint64_t rotl64(uint64_t n, unsigned int c) {
 #ifdef __AVX2__
 #include <x86intrin.h>
 
-template<typename HashFamily = ::hashing::TwoIndependentMultiplyShift>
+template<typename HashFamily = ::hashing::SimpleMixSplit>
 class SimdBlockFilterFixed {
  private:
   // The filter is divided up into Buckets:
@@ -201,7 +201,7 @@ struct mask64bytes {
 
 typedef struct mask64bytes mask64bytes_t;
 
-template<typename HashFamily = ::hashing::TwoIndependentMultiplyShift>
+template<typename HashFamily = ::hashing::SimpleMixSplit>
 class SimdBlockFilterFixed64 {
  private:
   // The filter is divided up into Buckets:
@@ -298,7 +298,7 @@ SimdBlockFilterFixed64<HashFamily>::Find(const uint64_t key) const noexcept {
 #ifdef __aarch64__
 #include <arm_neon.h>
 
-template<typename HashFamily = ::hashing::TwoIndependentMultiplyShift>
+template<typename HashFamily = ::hashing::SimpleMixSplit>
 class SimdBlockFilterFixed {
  private:
   // The filter is divided up into Buckets:
@@ -398,11 +398,11 @@ SimdBlockFilterFixed<HashFamily>::Find(const uint64_t key) const noexcept {
 /// 16-byte version (not very good)
 ///////////////////////////////////////////////////////////////////
 
-#ifdef __SSE4_1__
+#ifdef __SSE41__
 
 #include <smmintrin.h>
 
-template<typename HashFamily = ::hashing::TwoIndependentMultiplyShift>
+template<typename HashFamily = ::hashing::SimpleMixSplit>
 class SimdBlockFilterFixed16 {
  private:
   // The filter is divided up into Buckets:

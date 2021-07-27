@@ -31,7 +31,7 @@ const size_t kMaxCuckooCount = 500;
 // PackedTable to enable semi-sorting
 template <typename ItemType, size_t bits_per_item,
           template <size_t> class TableType = SingleTable,
-          typename HashFamily = hashing::TwoIndependentMultiplyShift>
+          typename HashFamily = hashing::SimpleMixSplit>
 class CuckooFilter {
   // Storage of items
   TableType<bits_per_item> *table_;

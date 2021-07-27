@@ -11,7 +11,7 @@ using namespace hashing;
 
 namespace xorfilter {
 
-template <typename ItemType, typename HashFamily = TwoIndependentMultiplyShift>
+template <typename ItemType, typename HashFamily = SimpleMixSplit>
 class XorFilter13 {
 
   size_t size;
@@ -41,7 +41,7 @@ class XorFilter13 {
     delete hasher;
   }
 
-  Status AddAll(const vector<ItemType> data, const size_t start, const size_t end);
+  Status AddAll(const vector<ItemType>& data, const size_t start, const size_t end);
 
   // Report if the item is inserted, with false positive rate.
   Status Contain(const ItemType &item) const;
@@ -58,7 +58,7 @@ class XorFilter13 {
 
 template <typename ItemType, typename HashFamily>
 Status XorFilter13<ItemType, HashFamily>::AddAll(
-    const vector<ItemType> keys, const size_t start, const size_t end) {
+    const vector<ItemType>& keys, const size_t start, const size_t end) {
 
     int m = arrayLength;
     uint64_t* reverseOrder = new uint64_t[size];
@@ -219,14 +219,6 @@ Status XorFilter13<ItemType, HashFamily>::AddAll(
         if (reverseOrderPos == size) {
             break;
         }
-
-        std::cout << "WARNING: hashIndex " << hashIndex << "\n";
-        if (hashIndex >= 0) {
-            std::cout << (end - start) << " keys; arrayLength " << arrayLength
-                << " blockLength " << blockLength
-                << " reverseOrderPos " << reverseOrderPos << "\n";
-        }
-
         hashIndex++;
 
         // use a new random numbers

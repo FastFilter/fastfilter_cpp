@@ -106,7 +106,6 @@ public:
     // call mask() to clear them
     inline uint32_t get(size_t index) {
         uint64_t x = data[index / 6];
-        // return (x >> (10 * (index % 6)));
         int m = 3 * (index % 2) + (index % 3);
         return x >> (10 * m);
     }
@@ -116,7 +115,6 @@ public:
         }
     }
     inline void set(size_t index, uint32_t value) {
-        // data[index / 6] |= ((uint64_t) value & 0x3ff) << (10 * (index % 6));
         int m = 3 * (index % 2) + (index % 3);
         data[index / 6] |= ((uint64_t) value & 0x3ff) << (10 * m);
     }

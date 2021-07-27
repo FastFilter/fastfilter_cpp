@@ -39,7 +39,7 @@ size_t getHashFromHash(uint64_t hash, int index, int blockLength) {
 }
 
 template <typename ItemType, typename FingerprintType,
-          typename FingerprintStorageType, typename HashFamily = TwoIndependentMultiplyShift>
+          typename FingerprintStorageType, typename HashFamily = SimpleMixSplit>
 class XorFilter2 {
 
   size_t size;
@@ -68,7 +68,7 @@ class XorFilter2 {
     delete hasher;
   }
 
-  Status AddAll(const vector<ItemType> data, const size_t start, const size_t end);
+  Status AddAll(const vector<ItemType>& data, const size_t start, const size_t end);
 
   // Report if the item is inserted, with false positive rate.
   Status Contain(const ItemType &item) const;
@@ -122,7 +122,7 @@ int applyBlock2(uint64_t* tmp, int b, int len, t2val_t * t2vals, int* alone, int
 template <typename ItemType, typename FingerprintType,
           typename FingerprintStorageType, typename HashFamily>
 Status XorFilter2<ItemType, FingerprintType, FingerprintStorageType, HashFamily>::AddAll(
-    const vector<ItemType> keys, const size_t start, const size_t end) {
+    const vector<ItemType>& keys, const size_t start, const size_t end) {
     int m = arrayLength;
     uint64_t* reverseOrder = new uint64_t[size];
     uint8_t* reverseH = new uint8_t[size];
@@ -245,13 +245,6 @@ Status XorFilter2<ItemType, FingerprintType, FingerprintStorageType, HashFamily>
 
         if (reverseOrderPos == size) {
             break;
-        }
-
-        std::cout << "WARNING: hashIndex " << hashIndex << "\n";
-        if (hashIndex >= 0) {
-            std::cout << (end - start) << " keys; arrayLength " << arrayLength
-                << " blockLength " << blockLength
-                << " reverseOrderPos " << reverseOrderPos << "\n";
         }
 
         hashIndex++;
