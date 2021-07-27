@@ -124,5 +124,3 @@ template <typename T>
   if((y_probability != 0.0) && (y_probability != 1.0)) { fast_shuffle(result.data(), result.size(), &seed); }
   return result;
 }
-
-
