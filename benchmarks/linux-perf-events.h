@@ -37,7 +37,6 @@ public:
     const unsigned long flags = 0;
 
     num_events = config_vec.size();
-    uint32_t i = 0;
     for (auto config : config_vec) {
       attribs.config = config;
       int fd = syscall(__NR_perf_event_open, &attribs, pid, cpu, group, flags);
