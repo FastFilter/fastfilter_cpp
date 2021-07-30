@@ -239,12 +239,13 @@ Statistics FilterBenchmark(
 #ifdef __linux__
     unified.end(results);
     printf("%3.2f%%  ",found_probability);
-    printf("cycles: %5.1f/key, instructions: (%5.1f/key, %4.2f/cycle) cache misses: %5.2f/key branch misses: %4.2f/key\n",
+    printf("cycles: %5.1f/key, instructions: (%5.1f/key, %4.2f/cycle) cache misses: %5.2f/key branch misses: %4.2f/key effective frequency %4.2f GHz\n",
       results[0]*1.0/to_lookup_mixed.size(),
       results[1]*1.0/to_lookup_mixed.size(),
       results[1]*1.0/results[0],
       results[2]*1.0/to_lookup_mixed.size(),
-      results[3] * 1.0/to_lookup_mixed.size());
+      results[3] * 1.0/to_lookup_mixed.size(),
+      results[0]*1.0/lookup_time);
 #else
     std::cout << "." << std::flush;
 #endif
