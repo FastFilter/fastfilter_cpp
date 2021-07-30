@@ -1,6 +1,11 @@
 #ifndef THREEWISE_XOR_BINARY_FUSE_FILTER_XOR_FILTER_LOWMEM_H_
 #define THREEWISE_XOR_BINARY_FUSE_FILTER_XOR_FILTER_LOWMEM_H_
 #include "xor_binary_fuse_filter.h"
+
+/**
+ * As of July 2021, the lowmem versions of the binary fuse filters are
+ * the recommended defaults.
+ */
 namespace xorbinaryfusefilter_lowmem {
 // status returned by a xor filter operation
 enum Status {
