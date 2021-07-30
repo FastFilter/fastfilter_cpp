@@ -39,16 +39,9 @@ double calculateSizeFactor(size_t arity, size_t size) {
 }
 
 #include "3wise_xor_binary_fuse_filter_naive.h"
-#include "3wise_xor_binary_fuse_filter_prefetch.h"
-#include "3wise_xor_binary_fuse_filter_sorted.h"
-#include "3wise_xor_binary_fuse_filter_fixedsorted.h"
-#include "3wise_xor_binary_fuse_filter_partiallysorted.h"
-#include "3wise_xor_binary_fuse_filter_onehash.h"
 #include "3wise_xor_binary_fuse_filter_lowmem.h"
 
 #include "4wise_xor_binary_fuse_filter_naive.h"
-#include "4wise_xor_binary_fuse_filter_prefetch.h"
-#include "4wise_xor_binary_fuse_filter_partiallysorted.h"
 #include "4wise_xor_binary_fuse_filter_lowmem.h"
 
 #endif // XOR_BINARY_FUSE_FILTER_XOR_FILTER_H_

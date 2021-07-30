@@ -15,14 +15,8 @@
 #include "cuckoofilter_stable.h"
 #include "cuckoo_fuse.h"
 #include "xorfilter.h"
-#include "xorfilter_10bit.h"
-#include "xorfilter_13bit.h"
-#include "xorfilter_10_666bit.h"
-#include "xorfilter_2.h"
-#include "xorfilter_2n.h"
 #include "xorfilter_plus.h"
 #include "xorfilter_singleheader.h"
-#include "fusefilter_singleheader.h"
 #include "binaryfusefilter_singleheader.h"
 #include "xor_binary_fuse_filter.h"
 #include "bloom.h"
@@ -40,8 +34,6 @@ using namespace hashing;
 using namespace cuckoofilter;
 using namespace cuckoofusefilter;
 using namespace xorfilter;
-using namespace xorfilter2;
-using namespace xorfilter2n;
 using namespace xorfilter_plus;
 using namespace bloomfilter;
 using namespace counting_bloomfilter;
@@ -515,60 +507,6 @@ struct FilterAPI<xorbinaryfusefilter_naive::XorBinaryFuseFilter<ItemType, Finger
 
 
 template <typename ItemType, typename FingerprintType>
-struct FilterAPI<xorbinaryfusefilter_sorted::XorBinaryFuseFilter<ItemType, FingerprintType>> {
-  using Table = xorbinaryfusefilter_sorted::XorBinaryFuseFilter<ItemType, FingerprintType>;
-  static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
-  static void Add(uint64_t, Table*) {
-    throw std::runtime_error("Unsupported");
-  }
-  static void AddAll(const vector<ItemType>& keys, const size_t start, const size_t end, Table* table) {
-    table->AddAll(keys, start, end);
-  }
-  static void Remove(uint64_t, Table *) {
-    throw std::runtime_error("Unsupported");
-  }
-  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
-    return (0 == table->Contain(key));
-  }
-};
-
-template <typename ItemType, typename FingerprintType>
-struct FilterAPI<xorbinaryfusefilter_partiallysorted::XorBinaryFuseFilter<ItemType, FingerprintType>> {
-  using Table = xorbinaryfusefilter_partiallysorted::XorBinaryFuseFilter<ItemType, FingerprintType>;
-  static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
-  static void Add(uint64_t, Table*) {
-    throw std::runtime_error("Unsupported");
-  }
-  static void AddAll(const vector<ItemType>& keys, const size_t start, const size_t end, Table* table) {
-    table->AddAll(keys, start, end);
-  }
-  static void Remove(uint64_t, Table *) {
-    throw std::runtime_error("Unsupported");
-  }
-  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
-    return (0 == table->Contain(key));
-  }
-};
-
-template <typename ItemType, typename FingerprintType>
-struct FilterAPI<xorbinaryfusefilter_onehash::XorBinaryFuseFilter<ItemType, FingerprintType>> {
-  using Table = xorbinaryfusefilter_onehash::XorBinaryFuseFilter<ItemType, FingerprintType>;
-  static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
-  static void Add(uint64_t, Table*) {
-    throw std::runtime_error("Unsupported");
-  }
-  static void AddAll(const vector<ItemType>& keys, const size_t start, const size_t end, Table* table) {
-    table->AddAll(keys, start, end);
-  }
-  static void Remove(uint64_t, Table *) {
-    throw std::runtime_error("Unsupported");
-  }
-  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
-    return (0 == table->Contain(key));
-  }
-};
-
-template <typename ItemType, typename FingerprintType>
 struct FilterAPI<xorbinaryfusefilter_lowmem::XorBinaryFuseFilter<ItemType, FingerprintType>> {
   using Table = xorbinaryfusefilter_lowmem::XorBinaryFuseFilter<ItemType, FingerprintType>;
   static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
@@ -587,43 +525,8 @@ struct FilterAPI<xorbinaryfusefilter_lowmem::XorBinaryFuseFilter<ItemType, Finge
 };
 
 template <typename ItemType, typename FingerprintType>
-struct FilterAPI<xorbinaryfusefilter_fixedsorted::XorBinaryFuseFilter<ItemType, FingerprintType>> {
-  using Table = xorbinaryfusefilter_fixedsorted::XorBinaryFuseFilter<ItemType, FingerprintType>;
-  static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
-  static void Add(uint64_t, Table*) {
-    throw std::runtime_error("Unsupported");
-  }
-  static void AddAll(const vector<ItemType>& keys, const size_t start, const size_t end, Table* table) {
-    table->AddAll(keys, start, end);
-  }
-  static void Remove(uint64_t, Table *) {
-    throw std::runtime_error("Unsupported");
-  }
-  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
-    return (0 == table->Contain(key));
-  }
-
-};
-template <typename ItemType, typename FingerprintType>
 struct FilterAPI<xorbinaryfusefilter_naive4wise::XorBinaryFuseFilter<ItemType, FingerprintType>> {
   using Table = xorbinaryfusefilter_naive4wise::XorBinaryFuseFilter<ItemType, FingerprintType>;
-  static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
-  static void Add(uint64_t, Table*) {
-    throw std::runtime_error("Unsupported");
-  }
-  static void AddAll(const vector<ItemType>& keys, const size_t start, const size_t end, Table* table) {
-    table->AddAll(keys, start, end);
-  }
-  static void Remove(uint64_t, Table *) {
-    throw std::runtime_error("Unsupported");
-  }
-  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
-    return (0 == table->Contain(key));
-  }
-};
-template <typename ItemType, typename FingerprintType>
-struct FilterAPI<xorbinaryfusefilter_partiallysorted4wise::XorBinaryFuseFilter<ItemType, FingerprintType>> {
-  using Table = xorbinaryfusefilter_partiallysorted4wise::XorBinaryFuseFilter<ItemType, FingerprintType>;
   static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
   static void Add(uint64_t, Table*) {
     throw std::runtime_error("Unsupported");
@@ -656,42 +559,6 @@ struct FilterAPI<xorbinaryfusefilter_lowmem4wise::XorBinaryFuseFilter<ItemType, 
   }
 };
 
-
-template <typename ItemType, typename FingerprintType>
-struct FilterAPI<xorbinaryfusefilter_4wise_prefetched::XorBinaryFuseFilter<ItemType, FingerprintType>> {
-  using Table = xorbinaryfusefilter_4wise_prefetched::XorBinaryFuseFilter<ItemType, FingerprintType>;
-  static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
-  static void Add(uint64_t, Table*) {
-    throw std::runtime_error("Unsupported");
-  }
-  static void AddAll(const vector<ItemType>& keys, const size_t start, const size_t end, Table* table) {
-    table->AddAll(keys, start, end);
-  }
-  static void Remove(uint64_t, Table *) {
-    throw std::runtime_error("Unsupported");
-  }
-  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
-    return (0 == table->Contain(key));
-  }
-};
-
-template <typename ItemType, typename FingerprintType>
-struct FilterAPI<xorbinaryfusefilter_prefetched::XorBinaryFuseFilter<ItemType, FingerprintType>> {
-  using Table = xorbinaryfusefilter_prefetched::XorBinaryFuseFilter<ItemType, FingerprintType>;
-  static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
-  static void Add(uint64_t, Table*) {
-    throw std::runtime_error("Unsupported");
-  }
-  static void AddAll(const vector<ItemType>& keys, const size_t start, const size_t end, Table* table) {
-    table->AddAll(keys, start, end);
-  }
-  static void Remove(uint64_t, Table *) {
-    throw std::runtime_error("Unsupported");
-  }
-  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
-    return (0 == table->Contain(key));
-  }
-};
 
 
 
@@ -801,56 +668,6 @@ struct FilterAPI<XorSingle> {
     CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
         // some compilers are not smart enough to do the inlining properly
         return xor8_contain(key, & table->filter);
-    }
-};
-
-
-class FuseSingle {
-public:
-    fuse8_t filter; // let us expose the struct. to avoid indirection
-    explicit FuseSingle(const size_t size) {
-        if (!fuse8_allocate(size, &filter)) {
-            throw ::std::runtime_error("Allocation failed");
-        }
-    }
-    ~FuseSingle() {
-        fuse8_free(&filter);
-    }
-    bool AddAll(const uint64_t* data, const size_t start, const size_t end) {
-        return fuse8_populate(data + start, end - start, &filter);
-    }
-    inline bool Contain(uint64_t &item) const {
-        return fuse8_contain(item, &filter);
-    }
-    inline size_t SizeInBytes() const {
-        return fuse8_size_in_bytes(&filter);
-    }
-    FuseSingle(FuseSingle && o) : filter(o.filter)  {
-        o.filter.fingerprints = nullptr; // we take ownership for the data
-    }
-private:
-    FuseSingle(const FuseSingle & o) = delete;
-};
-
-
-template<>
-struct FilterAPI<FuseSingle> {
-    using Table = FuseSingle;
-    static Table ConstructFromAddCount(size_t add_count) {
-        return Table(add_count);
-    }
-    static void Add(uint64_t, Table*) {
-        throw std::runtime_error("Unsupported");
-    }
-    static void AddAll(const vector<uint64_t>& keys, const size_t start, const size_t end, Table* table) {
-        table->AddAll(keys.data(), start, end);
-    }
-    static void Remove(uint64_t, Table *) {
-        throw std::runtime_error("Unsupported");
-    }
-    CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
-        // some compilers are not smart enough to do the inlining properly
-        return fuse8_contain(key, & table->filter);
     }
 };
 
@@ -981,95 +798,6 @@ struct FilterAPI<prefetch::XorFilter<ItemType, FingerprintType, HashFamily>> {
   }
 };
 
-template <typename ItemType, typename FingerprintType, typename FingerprintStorageType, typename HashFamily>
-struct FilterAPI<XorFilter2<ItemType, FingerprintType, FingerprintStorageType, HashFamily>> {
-  using Table = XorFilter2<ItemType, FingerprintType, FingerprintStorageType, HashFamily>;
-  static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
-  static void Add(uint64_t, Table*) {
-    throw std::runtime_error("Unsupported");
-  }
-  static void AddAll(const vector<ItemType>& keys, const size_t start, const size_t end, Table* table) {
-    table->AddAll(keys, start, end);
-  }
-  static void Remove(uint64_t, Table *) {
-    throw std::runtime_error("Unsupported");
-  }
-  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
-    return (0 == table->Contain(key));
-  }
-};
-
-template <typename ItemType, typename HashFamily>
-struct FilterAPI<XorFilter10<ItemType, HashFamily>> {
-  using Table = XorFilter10<ItemType, HashFamily>;
-  static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
-  static void Add(uint64_t, Table*) {
-    throw std::runtime_error("Unsupported");
-  }
-  static void AddAll(const vector<ItemType>& keys, const size_t start, const size_t end, Table* table) {
-    table->AddAll(keys, start, end);
-  }
-  static void Remove(uint64_t, Table *) {
-    throw std::runtime_error("Unsupported");
-  }
-  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
-    return (0 == table->Contain(key));
-  }
-};
-
-template <typename ItemType, typename HashFamily>
-struct FilterAPI<XorFilter13<ItemType, HashFamily>> {
-  using Table = XorFilter13<ItemType, HashFamily>;
-  static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
-  static void Add(uint64_t, Table*) {
-    throw std::runtime_error("Unsupported");
-  }
-  static void AddAll(const vector<ItemType>& keys, const size_t start, const size_t end, Table* table) {
-    table->AddAll(keys, start, end);
-  }
-  static void Remove(uint64_t, Table *) {
-    throw std::runtime_error("Unsupported");
-  }
-  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
-    return (0 == table->Contain(key));
-  }
-};
-
-template <typename ItemType, typename HashFamily>
-struct FilterAPI<XorFilter10_666<ItemType, HashFamily>> {
-  using Table = XorFilter10_666<ItemType, HashFamily>;
-  static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
-  static void Add(uint64_t, Table*) {
-    throw std::runtime_error("Unsupported");
-  }
-  static void AddAll(const vector<ItemType>& keys, const size_t start, const size_t end, Table* table) {
-    table->AddAll(keys, start, end);
-  }
-  static void Remove(uint64_t, Table *) {
-    throw std::runtime_error("Unsupported");
-  }
-  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
-    return (0 == table->Contain(key));
-  }
-};
-
-template <typename ItemType, typename FingerprintType, typename FingerprintStorageType, typename HashFamily>
-struct FilterAPI<XorFilter2n<ItemType, FingerprintType, FingerprintStorageType, HashFamily>> {
-  using Table = XorFilter2n<ItemType, FingerprintType, FingerprintStorageType, HashFamily>;
-  static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
-  static void Add(uint64_t, Table*) {
-    throw std::runtime_error("Unsupported");
-  }
-  static void AddAll(const vector<ItemType>& keys, const size_t start, const size_t end, Table* table) {
-    table->AddAll(keys, start, end);
-  }
-  static void Remove(uint64_t, Table *) {
-    throw std::runtime_error("Unsupported");
-  }
-  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
-    return (0 == table->Contain(key));
-  }
-};
 
 template <typename ItemType, typename FingerprintType, typename HashFamily>
 struct FilterAPI<XorFilterPlus<ItemType, FingerprintType, HashFamily>> {

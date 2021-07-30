@@ -343,11 +343,8 @@ int main(int argc, char * argv[]) {
   std::map<int,std::string> names = {
     // Xor
     {1000, "Xor8naive"}, {1002, "Xor16naive"},
-    {2000, "Xor8prefetch"}, {2002, "Xor16prefetch"},
     {0, "Xor8"}, {1, "Xor12"}, {2, "Xor16"},
     {3, "Xor+8"}, {4, "Xor+16"},
-    {5, "Xor10"}, {6, "Xor10.666"},
-    {7, "Xor10 (NBitArray)"}, {8, "Xor14 (NBitArray)"}, {9, "Xor8-2^n"},
     // Cuckooo
     {10,"Cuckoo8"}, {11,"Cuckoo12"}, {12,"Cuckoo16"},
     {13,"CuckooSemiSort13"},
@@ -393,24 +390,8 @@ int main(int argc, char * argv[]) {
 
     {80, "Morton"},
 
-    {96, "XorBinaryFuse8"},
-    {97, "XorBinaryFuse16"},
-    {98, "XorBinaryFuse8-4Wise-Prefetch"},
-    {99, "XorBinaryFuse16-4Wise-Prefetch"},
-    {100, "XorBinaryFuse8-Prefetched"},
-    {101, "XorBinaryFuse16-Prefetched"},
-    {102, "XorBinaryFuse8-4Wise"},
-    {103, "XorBinaryFuse16-4Wise"},
-    {106, "XorBinaryFuse8-Sorted"},
-    {107, "XorBinaryFuse16-Sorted"},
-    {108, "XorBinaryFuse8-PSorted"},
-    {109, "XorBinaryFuse16-PSorted"},
-    {110, "XorBinaryFuse8-FSorted"},
-    {111, "XorBinaryFuse16-FSorted"},
-    {112, "XorBinaryFuse8-4Wise-PSorted"},
-    {113, "XorBinaryFuse16-4Wise-PSorted"},
-    {114, "XorBinaryFuse8-OneHash"},
-    {115, "XorBinaryFuse16-OneHash"},
+    {96, "XorBinaryFuse8 (Naive)"},
+    {97, "XorBinaryFuse16 (Naive)"},
     {116, "XorBinaryFuse8-LowMem"},
     {117, "XorBinaryFuse16-LowMem"},
     {118, "XorBinaryFuse8-4Wise-LowMem"},
@@ -607,13 +588,6 @@ int main(int argc, char * argv[]) {
           add_count, to_add, intersectionsize, mixed_sets, true);
       cout << setw(NAME_WIDTH) << names[a] << cf << endl;
   }
-  a = 1;
-  if (algorithmId == a || (algos.find(a) != algos.end())) {
-      auto cf = FilterBenchmark<
-          XorFilter2<uint64_t, uint32_t, UInt12Array, SimpleMixSplit>>(
-          add_count, to_add, intersectionsize, mixed_sets,  true);
-      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
-  }
   a = 2;
   if (algorithmId == a || algorithmId < 0 || (algos.find(a) != algos.end())) {
       auto cf = FilterBenchmark<
@@ -662,41 +636,6 @@ int main(int argc, char * argv[]) {
   if (algorithmId == a || (algos.find(a) != algos.end())) {
       auto cf = FilterBenchmark<
           XorFilterPlus<uint64_t, uint16_t, SimpleMixSplit>>(
-          add_count, to_add, intersectionsize, mixed_sets,  true);
-      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
-  }
-  a = 5;
-  if (algorithmId == a || (algos.find(a) != algos.end())) {
-      auto cf = FilterBenchmark<
-          XorFilter10<uint64_t, SimpleMixSplit>>(
-          add_count, to_add, intersectionsize, mixed_sets,  true);
-      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
-  }
-  a = 6;
-  if (algorithmId == a || (algos.find(a) != algos.end())) {
-      auto cf = FilterBenchmark<
-          XorFilter10_666<uint64_t, SimpleMixSplit>>(
-          add_count, to_add, intersectionsize, mixed_sets,  true);
-      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
-  }
-  a = 7;
-  if (algorithmId == a || (algos.find(a) != algos.end())) {
-      auto cf = FilterBenchmark<
-          XorFilter2<uint64_t, uint16_t, NBitArray<uint16_t, 10>, SimpleMixSplit>>(
-          add_count, to_add, intersectionsize, mixed_sets,  true);
-      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
-  }
-  a = 8;
-  if (algorithmId == a || (algos.find(a) != algos.end())) {
-      auto cf = FilterBenchmark<
-          XorFilter2<uint64_t, uint16_t, NBitArray<uint16_t, 14>, SimpleMixSplit>>(
-          add_count, to_add, intersectionsize, mixed_sets,  true);
-      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
-  }
-  a = 9;
-  if (algorithmId == a || (algos.find(a) != algos.end())) {
-      auto cf = FilterBenchmark<
-          XorFilter2n<uint64_t, uint8_t, UIntArray<uint8_t>, SimpleMixSplit>>(
           add_count, to_add, intersectionsize, mixed_sets,  true);
       cout << setw(NAME_WIDTH) << names[a] << cf << endl;
   }
@@ -954,14 +893,6 @@ int main(int argc, char * argv[]) {
       cout << setw(NAME_WIDTH) << names[a] << cf << endl;
   }
 
-  a = 71;
-  if (algorithmId == a || (algos.find(a) != algos.end())) {
-      auto cf = FilterBenchmark<
-          FuseSingle>(
-          add_count, to_add, intersectionsize, mixed_sets,  true);
-      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
-  }
-
   a = 72;
   if (algorithmId == a || (algos.find(a) != algos.end())) {
       auto cf = FilterBenchmark<
@@ -993,34 +924,6 @@ int main(int argc, char * argv[]) {
           add_count, to_add, intersectionsize, mixed_sets,  true);
       cout << setw(NAME_WIDTH) << names[a] << cf << endl;
   }
-  a = 98;
-  if (algorithmId == a || (algos.find(a) != algos.end())) {
-      auto cf = FilterBenchmark<
-          xorbinaryfusefilter_4wise_prefetched::XorBinaryFuseFilter<uint64_t, uint8_t>>(
-          add_count, to_add, intersectionsize, mixed_sets,  true);
-      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
-  }
-  a = 99;
-  if (algorithmId == a || (algos.find(a) != algos.end())) {
-      auto cf = FilterBenchmark<
-          xorbinaryfusefilter_4wise_prefetched::XorBinaryFuseFilter<uint64_t, uint16_t>>(
-          add_count, to_add, intersectionsize, mixed_sets,  true);
-      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
-  }
-  a = 100;
-  if (algorithmId == a || (algos.find(a) != algos.end())) {
-      auto cf = FilterBenchmark<
-          xorbinaryfusefilter_prefetched::XorBinaryFuseFilter<uint64_t, uint8_t>>(
-          add_count, to_add, intersectionsize, mixed_sets,  true);
-      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
-  }
-  a = 101;
-  if (algorithmId == a || (algos.find(a) != algos.end())) {
-      auto cf = FilterBenchmark<
-          xorbinaryfusefilter_prefetched::XorBinaryFuseFilter<uint64_t, uint16_t>>(
-          add_count, to_add, intersectionsize, mixed_sets,  true);
-      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
-  }
   a = 102;
   if (algorithmId == a || (algos.find(a) != algos.end())) {
       auto cf = FilterBenchmark<
@@ -1036,76 +939,6 @@ int main(int argc, char * argv[]) {
       cout << setw(NAME_WIDTH) << names[a] << cf << endl;
   }
   // Xor Binary Fuse Filter ----------------------------------------------------------
-  a = 106;
-  if (algorithmId == a || (algos.find(a) != algos.end())) {
-      auto cf = FilterBenchmark<
-          xorbinaryfusefilter_sorted::XorBinaryFuseFilter<uint64_t, uint8_t>>(
-          add_count, to_add, intersectionsize, mixed_sets,  true);
-      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
-  }
-  a = 107;
-  if (algorithmId == a || (algos.find(a) != algos.end())) {
-      auto cf = FilterBenchmark<
-          xorbinaryfusefilter_sorted::XorBinaryFuseFilter<uint64_t, uint16_t>>(
-          add_count, to_add, intersectionsize, mixed_sets,  true);
-      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
-  }
-  a = 108;
-  if (algorithmId == a || (algos.find(a) != algos.end())) {
-      auto cf = FilterBenchmark<
-          xorbinaryfusefilter_partiallysorted::XorBinaryFuseFilter<uint64_t, uint8_t>>(
-          add_count, to_add, intersectionsize, mixed_sets,  true);
-      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
-  }
-  a = 109;
-  if (algorithmId == a || (algos.find(a) != algos.end())) {
-      auto cf = FilterBenchmark<
-          xorbinaryfusefilter_partiallysorted::XorBinaryFuseFilter<uint64_t, uint16_t>>(
-          add_count, to_add, intersectionsize, mixed_sets,  true);
-      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
-  }
-  a = 110;
-  if (algorithmId == a || (algos.find(a) != algos.end())) {
-      auto cf = FilterBenchmark<
-          xorbinaryfusefilter_fixedsorted::XorBinaryFuseFilter<uint64_t, uint8_t>>(
-          add_count, to_add, intersectionsize, mixed_sets,  true);
-      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
-  }
-  a = 111;
-  if (algorithmId == a || (algos.find(a) != algos.end())) {
-      auto cf = FilterBenchmark<
-          xorbinaryfusefilter_fixedsorted::XorBinaryFuseFilter<uint64_t, uint16_t>>(
-          add_count, to_add, intersectionsize, mixed_sets,  true);
-      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
-  }
-  a = 112;
-  if (algorithmId == a || (algos.find(a) != algos.end())) {
-      auto cf = FilterBenchmark<
-          xorbinaryfusefilter_partiallysorted4wise::XorBinaryFuseFilter<uint64_t, uint8_t>>(
-          add_count, to_add, intersectionsize, mixed_sets,  true);
-      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
-  }
-  a = 113;
-  if (algorithmId == a || (algos.find(a) != algos.end())) {
-      auto cf = FilterBenchmark<
-          xorbinaryfusefilter_partiallysorted4wise::XorBinaryFuseFilter<uint64_t, uint16_t>>(
-          add_count, to_add, intersectionsize, mixed_sets,  true);
-      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
-  }
-  a = 114;
-  if (algorithmId == a || (algos.find(a) != algos.end())) {
-      auto cf = FilterBenchmark<
-          xorbinaryfusefilter_onehash::XorBinaryFuseFilter<uint64_t, uint8_t>>(
-          add_count, to_add, intersectionsize, mixed_sets,  true);
-      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
-  }
-  a = 115;
-  if (algorithmId == a || (algos.find(a) != algos.end())) {
-      auto cf = FilterBenchmark<
-          xorbinaryfusefilter_onehash::XorBinaryFuseFilter<uint64_t, uint16_t>>(
-          add_count, to_add, intersectionsize, mixed_sets,  true);
-      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
-  }
   a = 116;
   if (algorithmId == a || algorithmId < 0 || (algos.find(a) != algos.end())) {
       auto cf = FilterBenchmark<
