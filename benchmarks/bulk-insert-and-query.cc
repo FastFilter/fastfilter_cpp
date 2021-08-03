@@ -153,6 +153,28 @@ struct samples {
 };
 
 typedef struct samples samples_t;
+#ifdef __linux__
+bool is_amd() {
+    FILE *cpuinfo = fopen("/proc/cpuinfo", "r");
+    if(cpuinfo == NULL) { return false; }
+    char line[256];
+    while(fgets(line, 256, cpuinfo) {
+        if(strncmp(line, "vendor_id", 9) == 0) {
+            char *colon = strchr(line, ':');
+            if(colon == NULL || colon[1] == 0) {
+                fclose(cpuinfo);
+                return false;
+            }
+            const char * target = "AuthenticAMD";
+            bool answer = (strncmp(colon + 2, target, strlen(target)) == 0);
+            fclose(cpuinfo);
+            return answer;
+        }
+    }
+    fclose(cpuinfo);
+    return false;
+}
+#endif
 
 template <typename Table>
 Statistics FilterBenchmark(
@@ -169,7 +191,8 @@ Statistics FilterBenchmark(
   vector<int> evts;
   evts.push_back(PERF_COUNT_HW_CPU_CYCLES);
   evts.push_back(PERF_COUNT_HW_INSTRUCTIONS);
-  evts.push_back(PERF_COUNT_HW_CACHE_MISSES);
+  // patch: https://lore.kernel.org/patchwork/patch/222439/
+  evts.push_back(is_amd() ? 0x037E : PERF_COUNT_HW_CACHE_MISSES);
   evts.push_back(PERF_COUNT_HW_BRANCH_MISSES);
   LinuxEvents<PERF_TYPE_HARDWARE> unified(evts);
   vector<unsigned long long> results;
