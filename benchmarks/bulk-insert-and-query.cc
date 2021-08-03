@@ -158,7 +158,7 @@ bool is_amd() {
     FILE *cpuinfo = fopen("/proc/cpuinfo", "r");
     if(cpuinfo == NULL) { return false; }
     char line[256];
-    while(fgets(line, 256, cpuinfo) {
+    while(fgets(line, 256, cpuinfo)) {
         if(strncmp(line, "vendor_id", 9) == 0) {
             char *colon = strchr(line, ':');
             if(colon == NULL || colon[1] == 0) {
