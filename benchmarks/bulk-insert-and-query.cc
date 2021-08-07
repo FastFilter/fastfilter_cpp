@@ -289,12 +289,13 @@ Statistics FilterBenchmark(
 #ifdef __linux__
     unified.end(results);
     printf("remove ");
-    printf("cycles: %5.1f/key, instructions: (%5.1f/key, %4.2f/cycle) cache misses: %5.2f/key branch misses: %4.2f/key\n",
+    printf("cycles: %5.1f/key, instructions: (%5.1f/key, %4.2f/cycle) cache misses: %5.2f/key branch misses: %4.2f/key effective frequency %4.2f GHz\n",
       results[0]*1.0/add_count,
       results[1]*1.0/add_count ,
       results[1]*1.0/results[0],
       results[2]*1.0/add_count,
-      results[3]*1.0/add_count);
+      results[3]*1.0/add_count,
+      results[0]*1.0/time);
 #else
     std::cout << "." << std::flush;
 #endif
@@ -347,7 +348,7 @@ int main(int argc, char * argv[]) {
     {0, "Xor8"}, {1, "Xor12"}, {2, "Xor16"},
     {3, "Xor+8"}, {4, "Xor+16"},
     {5, "Xor10"}, {6, "Xor10.666"},
-    {7, "Xor10 (NBitArray)"}, {8, "Xor14 (NBitArray)"}, {9, "Xor8-2^n"},
+    {7, "Xor10-NBitArray"}, {8, "Xor14-NBitArray"}, {9, "Xor8-2^n"},
     // Cuckooo
     {10,"Cuckoo8"}, {11,"Cuckoo12"}, {12,"Cuckoo16"},
     {13,"CuckooSemiSort13"},
@@ -363,18 +364,18 @@ int main(int argc, char * argv[]) {
 #endif
     // Bloom
     {40, "Bloom8"}, {41, "Bloom12" }, {42, "Bloom16"},
-    {43, "Bloom8 (addall)"}, {44, "Bloom12 (addall)"}, {45, "Bloom16 (addall)"},
-    {46, "BranchlessBloom8 (addall)"},
-    {47, "BranchlessBloom12 (addall)"},
-    {48, "BranchlessBloom16 (addall)"},
+    {43, "Bloom8-addAll"}, {44, "Bloom12-addAll"}, {45, "Bloom16-addAll"},
+    {46, "BranchlessBloom8-addAll"},
+    {47, "BranchlessBloom12-addAll"},
+    {48, "BranchlessBloom16-addAll"},
     // Blocked Bloom
     {50, "SimpleBlockedBloom"},
 #ifdef __aarch64__
     {51, "BlockedBloom"},
-    {52, "BlockedBloom (addall)"},
+    {52, "BlockedBloom-addAll"},
 #elif defined( __AVX2__)
     {51, "BlockedBloom"},
-    {52, "BlockedBloom (addall)"},
+    {52, "BlockedBloom-addAll"},
     {53, "BlockedBloom64"},
 #endif
 #ifdef __SSE41__
@@ -382,8 +383,8 @@ int main(int argc, char * argv[]) {
 #endif
 
     // Counting Bloom
-    {60, "CountingBloom10 (addall)"},
-    {61, "SuccCountingBloom10 (addall)"},
+    {60, "CountingBloom10-addAll"},
+    {61, "SuccCountingBloom10-addAll"},
     {62, "SuccCountBlockBloom10"},
     {63, "SuccCountBlockBloomRank10"},
 
@@ -393,8 +394,8 @@ int main(int argc, char * argv[]) {
 
     {80, "Morton"},
 
-    {96, "XorBinaryFuse8"},
-    {97, "XorBinaryFuse16"},
+    {96, "XorBinaryFuse8-Naive"},
+    {97, "XorBinaryFuse16-Naive"},
     {98, "XorBinaryFuse8-4Wise-Prefetch"},
     {99, "XorBinaryFuse16-4Wise-Prefetch"},
     {100, "XorBinaryFuse8-Prefetched"},
@@ -411,10 +412,10 @@ int main(int argc, char * argv[]) {
     {113, "XorBinaryFuse16-4Wise-PSorted"},
     {114, "XorBinaryFuse8-OneHash"},
     {115, "XorBinaryFuse16-OneHash"},
-    {116, "XorBinaryFuse8-LowMem"},
-    {117, "XorBinaryFuse16-LowMem"},
-    {118, "XorBinaryFuse8-4Wise-LowMem"},
-    {119, "XorBinaryFuse16-4Wise-LowMem"},
+    {116, "XorBinaryFuse8"},
+    {117, "XorBinaryFuse16"},
+    {118, "XorBinaryFuse8-4Wise"},
+    {119, "XorBinaryFuse16-4Wise"},
     {1056, "HomogRibbon64_5"},
     {1076, "HomogRibbon64_7"}, // interesting
     {1086, "HomogRibbon64_8"},
@@ -801,7 +802,7 @@ int main(int argc, char * argv[]) {
       cout << setw(NAME_WIDTH) << names[a] << cf << endl;
   }
   a = 41;
-  if (algorithmId == a  || (algos.find(a) != algos.end())) {
+  if (algorithmId == a || (algos.find(a) != algos.end())) {
       auto cf = FilterBenchmark<
           BloomFilter<uint64_t, 12, false, SimpleMixSplit>>(
           add_count, to_add, intersectionsize, mixed_sets);
