@@ -343,8 +343,8 @@ void parse_comma_separated(char * c, std::set<int> & answer ) {
 int main(int argc, char * argv[]) {
   std::map<int,std::string> names = {
     // Xor
-    {1000, "Xor8naive"}, {1002, "Xor16naive"},
-    {0, "Xor8"}, {1, "Xor12"}, {2, "Xor16"},
+    {1000, "Xor8-naive"}, {1002, "Xor16-naive"},
+    {0, "Xor8"}, {2, "Xor16"},
     {3, "Xor+8"}, {4, "Xor+16"},
     // Cuckooo
     {10,"Cuckoo8"}, {11,"Cuckoo12"}, {12,"Cuckoo16"},
@@ -386,17 +386,16 @@ int main(int argc, char * argv[]) {
     {63, "SuccCountBlockBloomRank10"},
 
     {70, "Xor8-singleheader"},
-    {71, "Fuse8-singleheader"},
     {72, "BinaryFuse8-singleheader"},
 
     {80, "Morton"},
 
-    {96, "XorBinaryFuse8 (Naive)"},
-    {97, "XorBinaryFuse16 (Naive)"},
-    {116, "XorBinaryFuse8-LowMem"},
-    {117, "XorBinaryFuse16-LowMem"},
-    {118, "XorBinaryFuse8-4Wise-LowMem"},
-    {119, "XorBinaryFuse16-4Wise-LowMem"},
+    {96, "XorBinaryFuse8-naive"},
+    {97, "XorBinaryFuse16-naive"},
+    {116, "XorBinaryFuse8"},
+    {117, "XorBinaryFuse16"},
+    {118, "XorBinaryFuse8-4wise"},
+    {119, "XorBinaryFuse16-4wise"},
     {1056, "HomogRibbon64_5"},
     {1076, "HomogRibbon64_7"}, // interesting
     {1086, "HomogRibbon64_8"},
