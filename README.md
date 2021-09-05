@@ -106,3 +106,4 @@ The ribbon filters are from https://github.com/pdillinger/fastfilter_cpp.
 * [Python](https://github.com/GreyDireWolf/pyxorfilter)
 * Rust: [1](https://github.com/bnclabs/xorfilter), [2](https://github.com/codri/xorfilter-rs), [3](https://github.com/Polochon-street/rustxorfilter)
 * [Zig](https://github.com/hexops/xorfilter)
+* [Julia](https://github.com/JokingHero/FastFilter.jl)
