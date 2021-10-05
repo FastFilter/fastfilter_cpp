@@ -122,7 +122,7 @@ template <typename HashFamily>
 struct FilterAPI<SimdBlockFilterFixed<HashFamily>> {
   using Table = SimdBlockFilterFixed<HashFamily>;
   static Table ConstructFromAddCount(size_t add_count) {
-    Table ans(ceil(add_count * 8.0 / CHAR_BIT));
+    Table ans(add_count);
     return ans;
   }
   static void Add(uint64_t key, Table* table) {
@@ -146,7 +146,7 @@ template <typename HashFamily>
 struct FilterAPI<SimdBlockFilter<HashFamily>> {
   using Table = SimdBlockFilter<HashFamily>;
   static Table ConstructFromAddCount(size_t add_count) {
-    Table ans(ceil(log2(add_count * 8.0 / CHAR_BIT)));
+    Table ans(ceil(log2(add_count)));
     return ans;
   }
   static void Add(uint64_t key, Table* table) {
@@ -167,7 +167,7 @@ template <typename HashFamily>
 struct FilterAPI<SimdBlockFilterFixed64<HashFamily>> {
   using Table = SimdBlockFilterFixed64<HashFamily>;
   static Table ConstructFromAddCount(size_t add_count) {
-    Table ans(ceil(add_count * 8.0 / CHAR_BIT));
+    Table ans(add_count);
     return ans;
   }
   static void Add(uint64_t key, Table* table) {
@@ -188,7 +188,7 @@ template <typename HashFamily>
 struct FilterAPI<SimdBlockFilterFixed<HashFamily>> {
   using Table = SimdBlockFilterFixed<HashFamily>;
   static Table ConstructFromAddCount(size_t add_count) {
-    Table ans(ceil(add_count * 8.0 / CHAR_BIT));
+    Table ans(add_count);
     return ans;
   }
   static void Add(uint64_t key, Table* table) {
@@ -211,7 +211,7 @@ template <typename HashFamily>
 struct FilterAPI<SimdBlockFilterFixed16<HashFamily>> {
   using Table = SimdBlockFilterFixed16<HashFamily>;
   static Table ConstructFromAddCount(size_t add_count) {
-    Table ans(ceil(add_count * 8.0 / CHAR_BIT));
+    Table ans(add_count);
     return ans;
   }
   static void Add(uint64_t key, Table* table) {
@@ -725,7 +725,7 @@ template<size_t blocksize, int k, typename HashFamily>
 struct FilterAPI<SimpleBlockFilter<blocksize,k,HashFamily>> {
   using Table = SimpleBlockFilter<blocksize,k,HashFamily>;
   static Table ConstructFromAddCount(size_t add_count) {
-    Table ans(ceil(add_count * 8.0 / CHAR_BIT));
+    Table ans(add_count);
     return ans;
   }
   static void Add(uint64_t key, Table* table) {
