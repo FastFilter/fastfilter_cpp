@@ -356,8 +356,9 @@ int main(int argc, char * argv[]) {
     // GCS
     {20,"GCS"},
 #ifdef __AVX2__
-    // CQF
+    // CQF + VQF
     {30,"CQF"},
+    {31,"VQF"},
 #endif
     // Bloom
     {40, "Bloom8"}, {41, "Bloom12" }, {42, "Bloom16"},
@@ -729,6 +730,13 @@ int main(int argc, char * argv[]) {
           add_count, to_add, intersectionsize, mixed_sets,  false, true);
       cout << setw(NAME_WIDTH) << names[a] << cf << endl;
   }
+  a = 31;
+  if (algorithmId == a || (algos.find(a) != algos.end())) {
+      auto cf = FilterBenchmark<
+          VQFilter<uint64_t, SimpleMixSplit>>(
+          add_count, to_add, intersectionsize, mixed_sets,  true, false);
+      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
+  }  
 #endif
 
   // Bloom ----------------------------------------------------------

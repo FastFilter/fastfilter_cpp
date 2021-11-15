@@ -24,6 +24,7 @@
 #include "gcs.h"
 #ifdef __AVX2__
 #include "gqf_cpp.h"
+#include "vqf_cpp.h"
 #include "simd-block.h"
 #endif
 #include "simd-block-fixed-fpp.h"
@@ -41,6 +42,7 @@ using namespace gcsfilter;
 using namespace CompressedCuckoo; // Morton filter namespace
 #ifdef __AVX2__
 using namespace gqfilter;
+using namespace vqfilter;
 #endif
 using namespace ribbon;
 
@@ -848,6 +850,27 @@ struct FilterAPI<GQFilter<ItemType, bits_per_item, HashFamily>> {
   }
   static void Remove(uint64_t key, Table * table) {
     table->Remove(key);
+  }
+  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
+    return (0 == table->Contain(key));
+  }
+};
+
+template <typename ItemType, typename HashFamily>
+struct FilterAPI<VQFilter<ItemType, HashFamily>> {
+  using Table = VQFilter<ItemType, HashFamily>;
+  static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
+  static void Add(uint64_t key, Table* table) {
+    table->Add(key);
+  }
+  static void AddAll(const vector<uint64_t>& keys, const size_t start, const size_t end, Table* table) {
+    table->AddAll(keys, start, end);
+  // for(size_t i = start; i < end; i++) { Add(keys[i],table); }
+  }
+  static void Remove(uint64_t, Table *) {
+    throw std::runtime_error("Unsupported");
+    // sometimes fails with the original VQF implementation
+    // table->Remove(key);
   }
   CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
     return (0 == table->Contain(key));

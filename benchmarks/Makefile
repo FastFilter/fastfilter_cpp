@@ -7,6 +7,7 @@ OPT = -O3 -DNDEBUG -std=c++17
 CXXFLAGS += -fno-strict-aliasing -Wall -std=c++11 -I. -I../src/ \
     -I../src/bloom/ -I../src/cuckoo/ -I../src/gcs \
     -I../src/gqf/ -I../src/morton/ -I../src/xorfilter -I../src/ribbon \
+    -I../src/vqf \
     $(OPT)
 
 UNAME_P := $(shell uname -p)
@@ -20,6 +21,7 @@ LDFLAGS = -Wall -Wextra
 HEADERS = $(wildcard ../src/*.h \
     ../src/bloom/*.h ../src/cuckoo/*.h ../src/gcs/*.h \
     ../src/gqf/*.h ../src/morton/*.h ../src/xorfilter/*.h ../src/ribbon/*.h \
+    ../src/vqf/*.h \
     ) *.h
 
 .PHONY: all
