@@ -44,7 +44,7 @@ class VQFilter {
     uint64_t nslots = (uint64_t) (n / 0.85);
 #else
     // when inserting in random order
-    uint64_t nslots = (uint64_t) (n / 0.94);
+    uint64_t nslots = (uint64_t) (n / 0.93);
 #endif
 
     if ((filter = vqf_init(nslots)) == NULL) {

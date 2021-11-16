@@ -144,12 +144,12 @@ bool vqf_is_present(vqf_filter * restrict filter, uint64_t h) {
     vqf_metadata * restrict metadata           = &filter->metadata;
     //vqf_block    * restrict blocks             = filter->blocks;
     uint64_t                 range              = metadata->range;
-
+    uint64_t h2 = rotateLeft(h, 32);
     __uint128_t x = (__uint128_t)h * (__uint128_t)range;
     uint64_t block_index = (uint64_t)(x >> 64);
-    __uint128_t y = (__uint128_t)rotateLeft(h, 32) * (__uint128_t)range;
+    __uint128_t y = (__uint128_t)h2 * (__uint128_t)range;
     uint64_t alt_block_index = (uint64_t)(y >> 64);
-    uint64_t tag = h & TAG_MASK;
+    uint64_t tag = (h ^ h2) & TAG_MASK;
 
     __builtin_prefetch(&filter->blocks[alt_block_index / QUQU_BUCKETS_PER_BLOCK]);
 
@@ -166,12 +166,12 @@ bool vqf_insert(vqf_filter * restrict filter, uint64_t h) {
    vqf_metadata * restrict metadata           = &filter->metadata;
    vqf_block    * restrict blocks             = filter->blocks;
    uint64_t                 range              = metadata->range;
-
+    uint64_t h2 = rotateLeft(h, 32);
     __uint128_t x = (__uint128_t)h * (__uint128_t)range;
     uint64_t block_index = (uint64_t)(x >> 64);
-    __uint128_t y = (__uint128_t)rotateLeft(h, 32) * (__uint128_t)range;
+    __uint128_t y = (__uint128_t)h2 * (__uint128_t)range;
     uint64_t alt_block_index = (uint64_t)(y >> 64);
-    uint64_t tag = h & TAG_MASK;
+    uint64_t tag = (h ^ h2) & TAG_MASK;
 
     uint64_t *block_md = blocks[block_index/QUQU_BUCKETS_PER_BLOCK].md;
     uint64_t block_free = get_block_free_space(block_md);
