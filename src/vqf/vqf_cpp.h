@@ -21,6 +21,8 @@ enum Status {
   NotSupported = 3,
 };
 
+// #define SORTED_ADD
+
 template <typename ItemType, typename HashFamily = SimpleMixSplit>
 class VQFilter {
 
@@ -37,10 +39,13 @@ class VQFilter {
  public:
   explicit VQFilter(const size_t n) : hasher() {
 
-    // when inserting in random order
-    // uint64_t nslots = (uint64_t) (n / 0.94);
+#ifdef SORTED_ADD
     // when inserting in sorted order
-    uint64_t nslots = (uint64_t) (n / 0.89);
+    uint64_t nslots = (uint64_t) (n / 0.85);
+#else
+    // when inserting in random order
+    uint64_t nslots = (uint64_t) (n / 0.94);
+#endif
 
     if ((filter = vqf_init(nslots)) == NULL) {
       std::cout << "Can't allocate.\n";
@@ -120,13 +125,7 @@ void VQFilter<ItemType, HashFamily>::ApplyBlock(uint64_t *tmp, int block, int le
 template <typename ItemType, typename HashFamily>
 Status VQFilter<ItemType, HashFamily>::AddAll(
     const ItemType* keys, const size_t start, const size_t end) {
-    /*
-   for (size_t i = start; i < end; i++) {
-     uint64_t key = keys[i];
-     uint64_t hash = hasher(key);
-     std::cout << "adding " << hash << "\n";
-  }   
-  */ 
+#ifdef SORTED_ADD
   int blocks = 1 + (end - start) / blockLen;
   uint64_t *tmp = new uint64_t[blocks * blockLen];
   int *tmpLen = new int[blocks]();
@@ -151,6 +150,18 @@ Status VQFilter<ItemType, HashFamily>::AddAll(
   }
   delete[] tmp;
   delete[] tmpLen;
+#else
+  // unsorted
+  for (size_t i = start; i < end; i++) {
+    uint64_t key = keys[i];
+    uint64_t hash = hasher(key);
+    bool ret = vqf_insert(filter, hash);
+    if (!ret) {
+      std::cout << "failed insertion for key.\n";
+      abort();
+    }
+  }
+#endif
   return Ok;
 }
 

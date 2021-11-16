@@ -731,7 +731,7 @@ int main(int argc, char * argv[]) {
       cout << setw(NAME_WIDTH) << names[a] << cf << endl;
   }
   a = 31;
-  if (algorithmId == a || (algos.find(a) != algos.end())) {
+  if (algorithmId == a || algorithmId < 0 || (algos.find(a) != algos.end())) {
       auto cf = FilterBenchmark<
           VQFilter<uint64_t, SimpleMixSplit>>(
           add_count, to_add, intersectionsize, mixed_sets,  true, false);
