@@ -92,7 +92,8 @@ The filter implementations are in `src/<type>/`. Most implementations depend on 
 The cuckoo filter and the benchmark are derived from https://github.com/efficient/cuckoofilter by Bin Fan et al.
 The SIMD blocked Bloom filter is from https://github.com/apache/impala (via the cuckoo filter).
 The Morton filter is from https://github.com/AMDComputeLibraries/morton_filter.
-The Counting Quotient Filter (CQF) is from https://github.com/splatlab/cqf.
+The counting quotient filter (CQF) is from https://github.com/splatlab/cqf.
+The vector quotient filter is from https://github.com/splatlab/vqf. 
 The ribbon filters are from https://github.com/pdillinger/fastfilter_cpp.
 
 
