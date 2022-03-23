@@ -174,6 +174,7 @@ Status XorBinaryFuseFilter<ItemType, FingerprintType, HashFamily>::AddAll(
       reverseOrder[startPos[segment_index]] = hash;
       startPos[segment_index]++;
     }
+    uint8_t countMask = 0;
     for (size_t i = 0; i < size; i++) {
       uint64_t hash = reverseOrder[i];
       for (int hi = 0; hi < 4; hi++) {
@@ -183,14 +184,16 @@ Status XorBinaryFuseFilter<ItemType, FingerprintType, HashFamily>::AddAll(
         t2hash[index] ^= hash;
         // this branch is never taken except if there is a problem in the hash code
         // in which case construction would fail
-        if (t2count[index] >= 0x80) {
-          goto counter_overflow;
-        }
+        countMask |= t2count[index];
       }
     }
-    counter_overflow:
     delete[] startPos;
-
+    if (countMask >= 0x80) {
+      // we have a possible counter overflow
+      // this branch is never taken except if there is a problem in the hash code
+      // in which case construction fails
+      continue;
+    }
     reverseOrderPos = 0;
     size_t alonePos = 0;
     for (size_t i = 0; i < arrayLength; i++) {
