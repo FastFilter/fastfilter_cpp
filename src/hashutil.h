@@ -6,35 +6,46 @@
 #include <sys/types.h>
 
 #include <string>
+#include <fstream>
 
 #include <random>
 
 namespace hashing {
-// See Martin Dietzfelbinger, "Universal hashing and k-wise independent random
-// variables via integer arithmetic without primes".
-/*
-class TwoIndependentMultiplyShift {
 
-  unsigned __int128 multiply_, add_;
+inline size_t sysrandom(void *dst, size_t dstlen) {
+        char *buffer = reinterpret_cast<char *>(dst);
+        std::ifstream stream("/dev/urandom", std::ios_base::binary | std::ios_base::in);
+        stream.read(buffer, dstlen);
 
- public:
-  TwoIndependentMultiplyShift() {
-    ::std::random_device random;
-    for (auto v : {&multiply_, &add_}) {
-      *v = random();
-      for (int i = 1; i <= 4; ++i) {
-        *v = *v << 32;
-        *v |= random();
-      }
+        return dstlen;
     }
-  }
 
-  inline uint64_t operator()(uint64_t key) const {
-    return (add_ + multiply_ * static_cast<decltype(multiply_)>(key)) >> 64;
-  }
-  
-};
-*/
+    // See Martin Dietzfelbinger, "Universal hashing and k-wise independent random
+    // variables via integer arithmetic without primes".
+    class TwoIndependentMultiplyShift {
+        unsigned __int128 multiply_, add_;
+
+    public:
+        TwoIndependentMultiplyShift() {
+            std::uint_least64_t seed;
+            sysrandom(&seed, sizeof(seed));
+            std::mt19937_64 rng(seed);
+            std::uniform_int_distribution<uint64_t> dist(0, UINT64_MAX);
+
+            for (auto v : {&multiply_, &add_}) {
+                for (size_t i = 0; i < 8; i++) {
+                    unsigned __int128 hi = dist(rng);
+                    unsigned __int128 lo = dist(rng);
+                    *v ^= (hi << 64) | lo;
+                }
+            }
+        }
+        
+        inline uint64_t operator()(uint64_t key) const {
+            return (add_ + multiply_ * static_cast<decltype(multiply_)>(key)) >> 64;
+        }
+    };
+
 
 class SimpleMixSplit {
 

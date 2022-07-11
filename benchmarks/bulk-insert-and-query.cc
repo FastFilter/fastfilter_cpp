@@ -359,6 +359,12 @@ int main(int argc, char * argv[]) {
     // CQF + VQF
     {30,"CQF"},
     {31,"VQF"},
+    // TwoChoicer
+    {32,"TwoChoice"},
+    // Prefix
+    {35,"PF[TC]"},
+    {36,"PF[CF-12-Flex]"},
+    {37,"PF[BBF-Flex]"},
 #endif
     // Bloom
     {40, "Bloom8"}, {41, "Bloom12" }, {42, "Bloom16"},
@@ -731,12 +737,60 @@ int main(int argc, char * argv[]) {
       cout << setw(NAME_WIDTH) << names[a] << cf << endl;
   }
   a = 31;
+//  if (algorithmId == a || algorithmId < 0 || (algos.find(a) != algos.end())) {
+//     auto cf = FilterBenchmark<
+//          VQFilter<uint64_t, SimpleMixSplit>>(
+//          add_count, to_add, intersectionsize, mixed_sets,  true, false);
+//      cout << setw(NAME_WIDTH) << names[a] << cf << endl;
+//  }
+#endif
+#ifdef __PF_AVX512__
+  a = 32;
   if (algorithmId == a || algorithmId < 0 || (algos.find(a) != algos.end())) {
       auto cf = FilterBenchmark<
-          VQFilter<uint64_t, SimpleMixSplit>>(
-          add_count, to_add, intersectionsize, mixed_sets,  true, false);
+            TC_shortcut<SimpleMixSplit>>(
+            add_count, to_add, intersectionsize, mixed_sets, false, false /* set to true to support deletions. */); 
       cout << setw(NAME_WIDTH) << names[a] << cf << endl;
-  }  
+  }
+  // Prefix ---------------------------------------------------------
+    a = 35;
+    if (algorithmId == a || algorithmId < 0 || (algos.find(a) != algos.end())) {
+        auto cf = FilterBenchmark<
+                Prefix_Filter<TC_shortcut<SimpleMixSplit>>>(
+                add_count, to_add, intersectionsize, mixed_sets,  false, false);
+        cout << setw(NAME_WIDTH) << names[a] << cf << endl;
+    }
+    a = 36;
+    if (algorithmId == a || algorithmId < 0 || (algos.find(a) != algos.end())) {
+        auto cf = FilterBenchmark<
+                Prefix_Filter<CuckooFilterStable<uint64_t, 12, SingleTable, SimpleMixSplit>>>(
+                add_count, to_add, intersectionsize, mixed_sets,  false, false);
+        cout << setw(NAME_WIDTH) << names[a] << cf << endl;
+    }
+    a = 37;
+    if (algorithmId == a || algorithmId < 0 || (algos.find(a) != algos.end())) {
+        auto cf = FilterBenchmark<
+                Prefix_Filter<SimdBlockFilterFixed<SimpleMixSplit>>>(
+                add_count, to_add, intersectionsize, mixed_sets,  false, false);
+        cout << setw(NAME_WIDTH) << names[a] << cf << endl;
+    }
+    /* 
+    a = 38;
+    if (algorithmId == a || algorithmId < 0 || (algos.find(a) != algos.end())) {
+        using prefix_l2 = Prefix_Filter<TrivialFilter>;
+        auto cf = FilterBenchmark<Prefix_Filter<prefix_l2>>(add_count, to_add, intersectionsize, mixed_sets,  false, false);
+        cout << setw(NAME_WIDTH) << names[a] << cf << endl;
+    }
+    a = 39;
+    if (algorithmId == a || algorithmId < 0 || (algos.find(a) != algos.end())) {
+        using prefix_l2 = Prefix_Filter<TrivialFilter>;
+        using prefix_l3 = Prefix_Filter<prefix_l2>;
+        using prefix_l4 = Prefix_Filter<prefix_l3>;
+
+        auto cf = FilterBenchmark<prefix_l4>(add_count, to_add, intersectionsize, mixed_sets,  false, false);
+        cout << setw(NAME_WIDTH) << names[a] << cf << endl;
+    } 
+    */
 #endif
 
   // Bloom ----------------------------------------------------------
