@@ -6,7 +6,7 @@
 #include "hashutil.h"
 #include "./tc-sym.hpp"
 
-template <typename HashFamily = TwoIndependentMultiplyShift>
+template <typename HashFamily = hashing::TwoIndependentMultiplyShift>
 class TC_shortcut {
     HashFamily h0;
     size_t capacity{0};
@@ -280,7 +280,7 @@ public:
     }
 
     auto get_name() const -> std::string {
-        return "TC-shortcut";
+        return "tc-shortcut";
     }
 
     auto get_cap() const -> size_t {

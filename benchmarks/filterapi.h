@@ -27,10 +27,10 @@
 #include "vqf_cpp.h"
 #include "simd-block.h"
 #endif
-#define __PF_AVX512__  (__AVX512CD__ & __AVX512DQ__ &__AVX512DQ__ &__AVX512DQ__)
+#define __PF_AVX512__  (__AVX512BW__ & __AVX512VL__ & __AVX512CD__ & __AVX512DQ__)
 #ifdef __PF_AVX512__
 #include "prefix/min_pd256.hpp"
-#include "tcShortcut/TC-shortcut.hpp"
+#include "tc-shortcut/tc-shortcut.hpp"
 #endif
 #include "simd-block-fixed-fpp.h"
 #include "ribbon_impl.h"
@@ -225,7 +225,6 @@ struct FilterAPI<TC_shortcut<HashFamily>> {
     static void Add(uint64_t key, Table *table) {
         if (!table->insert(key)) {
             std::cout << table->info() << std::endl;
-            //            std::cout << "max_load: \t" << 0.945 << std::endl;
             throw std::logic_error(table->get_name() + " is too small to hold all of the elements");
         }
     }
@@ -299,7 +298,7 @@ inline size_t get_l2_slots<SimdBlockFilterFixed<>>(size_t l1_items, const double
 }
 
 
-template<typename Table, typename HashFamily = TwoIndependentMultiplyShift>
+template<typename Table, typename HashFamily = hashing::TwoIndependentMultiplyShift>
 class Prefix_Filter {
     const size_t filter_max_capacity;
     const size_t number_of_pd;
@@ -326,7 +325,6 @@ public:
         }
 
         constexpr uint64_t pd256_plus_init_header = (((INT64_C(1) << min_pd::QUOTS) - 1) << 6) | 32;
-//         std_fill<__m256i *, __m256i>(pd_array, pd_array + number_of_pd, __m256i{0, 0, 0, 0});
         for (size_t i = 0; i < number_of_pd; i++){
           pd_array[i] = __m256i{pd256_plus_init_header, 0, 0, 0};
         }
