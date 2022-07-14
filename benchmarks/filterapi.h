@@ -28,7 +28,7 @@
 #include "simd-block.h"
 #endif
 #define __PF_AVX512__  (__AVX512BW__ & __AVX512VL__ & __AVX512CD__ & __AVX512DQ__)
-#ifdef __PF_AVX512__
+#if __PF_AVX512__
 #include "prefix/min_pd256.hpp"
 #include "tc-shortcut/tc-shortcut.hpp"
 #endif
