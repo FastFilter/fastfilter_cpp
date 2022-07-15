@@ -12,11 +12,9 @@
 namespace hashing {
 // See Martin Dietzfelbinger, "Universal hashing and k-wise independent random
 // variables via integer arithmetic without primes".
-/*
+
 class TwoIndependentMultiplyShift {
-
   unsigned __int128 multiply_, add_;
-
  public:
   TwoIndependentMultiplyShift() {
     ::std::random_device random;
@@ -28,13 +26,12 @@ class TwoIndependentMultiplyShift {
       }
     }
   }
-
   inline uint64_t operator()(uint64_t key) const {
     return (add_ + multiply_ * static_cast<decltype(multiply_)>(key)) >> 64;
   }
   
 };
-*/
+
 
 class SimpleMixSplit {
 

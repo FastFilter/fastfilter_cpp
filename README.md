@@ -86,7 +86,7 @@ The filter implementations are in `src/<type>/`. Most implementations depend on 
 
 - [Binary Fuse Filters: Fast and Smaller Than Xor Filters](http://arxiv.org/abs/2201.01174), Journal of Experimental Algorithmics (to appear).
 - [Xor Filters: Faster and Smaller Than Bloom and Cuckoo Filters](https://arxiv.org/abs/1912.08258), Journal of Experimental Algorithmics 25 (1), 2020
-
+- [Prefix Filter: Practically and Theoretically Better Than Bloom](https://arxiv.org/abs/2203.17139), PVLDB 15(7), 2022.
 
 ## Credit
 
@@ -96,6 +96,7 @@ The Morton filter is from https://github.com/AMDComputeLibraries/morton_filter.
 The counting quotient filter (CQF) is from https://github.com/splatlab/cqf.
 The vector quotient filter is from https://github.com/splatlab/vqf. 
 The ribbon filters are from https://github.com/pdillinger/fastfilter_cpp.
+The prefix filter is from https://github.com/TomerEven/Prefix-Filter.
 
 
 # Implementations of xor and binary fuse filters in other programming languages

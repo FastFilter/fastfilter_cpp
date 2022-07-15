@@ -27,6 +27,11 @@
 #include "vqf_cpp.h"
 #include "simd-block.h"
 #endif
+#define __PF_AVX512__  (__AVX512BW__ & __AVX512VL__ & __AVX512CD__ & __AVX512DQ__)
+#if __PF_AVX512__
+#include "prefix/min_pd256.hpp"
+#include "tc-shortcut/tc-shortcut.hpp"
+#endif
 #include "simd-block-fixed-fpp.h"
 #include "ribbon_impl.h"
 
@@ -206,6 +211,244 @@ struct FilterAPI<SimdBlockFilterFixed<HashFamily>> {
     return table->Find(key);
   }
 };
+
+#endif
+#if __PF_AVX512__
+template<typename HashFamily>
+struct FilterAPI<TC_shortcut<HashFamily>> {
+    using Table = TC_shortcut<HashFamily>;
+
+    static Table ConstructFromAddCount(size_t add_count) {
+        constexpr float load = .935;
+        return Table(add_count, load);
+    }
+    static void Add(uint64_t key, Table *table) {
+        if (!table->insert(key)) {
+            std::cout << table->info() << std::endl;
+            throw std::logic_error(table->get_name() + " is too small to hold all of the elements");
+        }
+    }
+    static void AddAll(const vector<uint64_t>& keys, const size_t start, const size_t end, Table* table) {
+        for(size_t i = start; i < end; i++) { Add(keys[i],table); }
+    }
+
+    static bool Add_attempt(uint64_t key, Table *table) {
+        if (!table->insert(key)) {
+            std::cout << "load when failed: \t" << table->get_effective_load() << std::endl;
+            std::cout << table->info() << std::endl;
+            return false;
+        }
+        return true;
+    }
+
+
+    static void Remove(uint64_t key, Table *table) {
+        table->remove(key);
+    }
+    CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table *table){
+        return table->lookup(key);
+    }
+};
+
+
+
+template<typename Table>
+inline size_t get_l2_slots(size_t l1_items, const double overflowing_items_ratio, const float loads[2]) {
+    const double expected_items_reaching_next_level = l1_items * overflowing_items_ratio;
+    size_t slots_in_l2 = (expected_items_reaching_next_level / loads[1]);
+    return slots_in_l2;
+}
+
+template<>
+inline size_t get_l2_slots<cuckoofilter::CuckooFilterStable<u64, 12>>(size_t l1_items, const double overflowing_items_ratio, const float loads[2]) {
+    constexpr auto expected_items100 = 0.07952;
+    constexpr auto expected_items95 = 0.0586;
+    constexpr auto spare_workload = 0.94;
+    constexpr auto safety = 1.08;
+    constexpr auto factor95 = safety * expected_items95 / spare_workload;
+    const double expected_items_reaching_next_level = l1_items * factor95;
+    return expected_items_reaching_next_level;
+}
+
+template<>
+inline size_t get_l2_slots<TC_shortcut<>>(size_t l1_items, const double overflowing_items_ratio, const float loads[2]) {
+    constexpr auto expected_items100 = 0.07952;
+    constexpr auto safety = 1.08;
+    constexpr auto expected_items95 = 0.0586;
+    constexpr auto spare_workload = 0.935;
+    constexpr auto factor95 = safety * expected_items95 / spare_workload;
+    const double expected_items_reaching_next_level = l1_items * factor95;
+    size_t slots_in_l2 = std::ceil(expected_items_reaching_next_level);
+    return slots_in_l2;
+}
+
+
+template<>
+inline size_t get_l2_slots<SimdBlockFilter<>>(size_t l1_items, const double overflowing_items_ratio, const float loads[2]) {
+    const double expected_items_reaching_next_level = l1_items * overflowing_items_ratio;
+    size_t slots_in_l2 = (expected_items_reaching_next_level / loads[1]);
+    return slots_in_l2 * 4;
+}
+
+template<>
+inline size_t get_l2_slots<SimdBlockFilterFixed<>>(size_t l1_items, const double overflowing_items_ratio, const float loads[2]) {
+    const double expected_items_reaching_next_level = l1_items * overflowing_items_ratio;
+    size_t slots_in_l2 = (expected_items_reaching_next_level / loads[1]);
+    return slots_in_l2 * 2;
+}
+
+
+template<typename Table, typename HashFamily = hashing::TwoIndependentMultiplyShift>
+class Prefix_Filter {
+    const size_t filter_max_capacity;
+    const size_t number_of_pd;
+    size_t cap[2] = {0};
+
+    hashing::TwoIndependentMultiplyShift Hasher, H0;
+    __m256i *pd_array;
+    Table GenSpare;
+
+    static double constexpr overflowing_items_ratio = 0.0586;//  = expected_items95
+
+public:
+    Prefix_Filter(size_t max_items, const float loads[2])
+        : filter_max_capacity(max_items),
+          number_of_pd(std::ceil(1.0 * max_items / (min_pd::MAX_CAP0 * loads[0]))),
+          GenSpare(FilterAPI<Table>::ConstructFromAddCount(get_l2_slots<Table>(max_items, overflowing_items_ratio, loads))),
+          Hasher(), H0() {
+
+        int ok = posix_memalign((void **) &pd_array, 32, 32 * number_of_pd);
+        if (ok != 0) {
+            std::cout << "Space allocation failed!" << std::endl;
+            assert(false);
+             exit(-3);
+        }
+
+        constexpr uint64_t pd256_plus_init_header = (((INT64_C(1) << min_pd::QUOTS) - 1) << 6) | 32;
+        for (size_t i = 0; i < number_of_pd; i++){
+          pd_array[i] = __m256i{pd256_plus_init_header, 0, 0, 0};
+        }
+
+    }
+
+    ~Prefix_Filter() {
+        free(pd_array);
+    }
+
+    __attribute__((always_inline)) inline static constexpr uint32_t reduce32(uint32_t hash, uint32_t n) {
+        // http://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/
+        return (uint32_t) (((uint64_t) hash * n) >> 32);
+    }
+
+
+    __attribute__((always_inline)) inline static constexpr uint16_t fixed_reduce(uint16_t hash) {
+        // http://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/
+        return (uint16_t) (((uint32_t) hash * 6400) >> 16);
+    }
+
+
+    inline auto Find(const u64 &item) const -> bool {
+        const u64 s = H0(item);
+        uint32_t out1 = s >> 32u, out2 = s;
+        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        const uint16_t qr = fixed_reduce(out2);
+        const int64_t quot = qr >> 8;
+        const uint8_t rem = qr;
+        // return min_pd::pd_find_25(quot, rem, &pd_array[pd_index]);
+        // return (!min_pd::cmp_qr1(qr, &pd_array[pd_index])) ? min_pd::pd_find_25(quot, rem, &pd_array[pd_index])
+        return (!min_pd::cmp_qr1(qr, &pd_array[pd_index])) ? min_pd::find_core(quot, rem, &pd_array[pd_index])
+                                                           : incSpare_lookup(pd_index, qr);
+    }
+
+    inline auto incSpare_lookup(size_t pd_index, u16 qr) const -> bool {
+        const u64 data = (pd_index << 13u) | qr;
+        return FilterAPI<Table>::Contain(data, &GenSpare);
+    }
+
+    inline void incSpare_add(size_t pd_index, const min_pd::add_res &a_info) {
+        cap[1]++;
+        u16 qr = (((u16) a_info.quot) << 8u) | a_info.rem;
+        const u64 data = (pd_index << 13u) | qr;
+        return FilterAPI<Table>::Add(data, &GenSpare);
+    }
+
+    void Add(const u64 &item) {
+        const u64 s = H0(item);
+        constexpr u64 full_mask = (1ULL << 55);
+        uint32_t out1 = s >> 32u, out2 = s;
+
+        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+
+        auto pd = pd_array + pd_index;
+        const uint64_t header = reinterpret_cast<const u64 *>(pd)[0];
+        const bool not_full = !(header & full_mask);
+
+        const uint16_t qr = fixed_reduce(out2);
+        const int64_t quot = qr >> 8;
+        const uint8_t rem = qr;
+
+        if (not_full) {
+            cap[0]++;
+            assert(!min_pd::is_pd_full(pd));
+            size_t end = min_pd::pd_select64(header >> 6, quot);
+            const size_t h_index = end + 6;
+            const u64 mask = _bzhi_u64(-1, h_index);
+            const u64 lo = header & mask;
+            const u64 hi = ((header & ~mask) << 1u);// & h_mask;
+            assert(!(lo & hi));
+            const u64 h7 = lo | hi;
+            memcpy(pd, &h7, 7);
+
+            const size_t body_index = end - quot;
+            min_pd::body_add_case0_avx(body_index, rem, pd);
+            assert(min_pd::find_core(quot, rem, pd));
+            assert(Find(item));
+            return;
+        } else {
+            auto add_res = min_pd::new_pd_swap_short(quot, rem, pd);
+            incSpare_add(pd_index, add_res);
+            assert(Find(item));
+        }
+    }
+
+    size_t SizeInBytes() const{
+        size_t l1 = sizeof(__m256i) * number_of_pd;
+        size_t l2 = GenSpare.SizeInBytes();
+        auto res = l1 + l2;
+        return res;
+    }
+
+};
+
+
+template<typename filterTable>
+struct FilterAPI<Prefix_Filter<filterTable>> {
+    using Table = Prefix_Filter<filterTable>;
+
+    static Table ConstructFromAddCount(size_t add_count) {
+        constexpr float loads[2] = {.95, .95};
+        return Table(add_count, loads);
+    }
+
+    static void Add(u64 key, Table *table) {
+        table->Add(key);
+    }
+
+    static void AddAll(const vector<uint64_t>& keys, const size_t start, const size_t end, Table* table) {
+        for(size_t i = start; i < end; i++) { Add(keys[i],table); }
+    }
+
+    static void Remove(u64 key, Table *table) {
+        throw std::runtime_error("Unsupported");
+    }
+
+    CONTAIN_ATTRIBUTES static bool Contain(u64 key, const Table *table) {
+        return table->Find(key);
+    }
+
+};
+
+
 #endif
 
 #ifdef __SSE41__
