@@ -744,7 +744,7 @@ int main(int argc, char * argv[]) {
       cout << setw(NAME_WIDTH) << names[a] << cf << endl;
   }
 #endif
-#ifdef __PF_AVX512__
+#if __PF_AVX512__
   a = 32;
   if (algorithmId == a || algorithmId < 0 || (algos.find(a) != algos.end())) {
       auto cf = FilterBenchmark<
