@@ -213,7 +213,7 @@ struct FilterAPI<SimdBlockFilterFixed<HashFamily>> {
 };
 
 #endif
-#ifdef __PF_AVX512__
+#if __PF_AVX512__
 template<typename HashFamily>
 struct FilterAPI<TC_shortcut<HashFamily>> {
     using Table = TC_shortcut<HashFamily>;
