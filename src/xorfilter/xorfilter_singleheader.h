@@ -7,6 +7,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifndef XOR_MAX_ITERATIONS
+#define XOR_MAX_ITERATIONS 100 // probabillity of success should always be > 0.5 so 100 iterations is highly unlikely
+#endif
+
 /**
  * We assume that you have a large set of 64-bit integers
  * and you want a data structure to do membership tests using
@@ -117,10 +121,9 @@ static inline bool xor8_allocate(uint32_t size, xor8_t *filter) {
 }
 
 // allocate enough capacity for a set containing up to 'size' elements
-// caller is responsible to call xor8_free(filter)
+// caller is responsible to call xor16_free(filter)
 static inline bool xor16_allocate(uint32_t size, xor16_t *filter) {
   size_t capacity = 32 + 1.23 * size;
-  filter->blockLength = capacity / 3;
   capacity = capacity / 3 * 3;
   filter->fingerprints = (uint16_t *)malloc(capacity * sizeof(uint16_t));
   if (filter->fingerprints != NULL) {
@@ -193,18 +196,6 @@ struct xor_h0h1h2_s {
 
 typedef struct xor_h0h1h2_s xor_h0h1h2_t;
 
-static inline xor_h0h1h2_t xor8_get_just_h0_h1_h2(uint64_t hash,
-                                                  const xor8_t *filter) {
-  xor_h0h1h2_t answer;
-  uint32_t r0 = (uint32_t)hash;
-  uint32_t r1 = (uint32_t)xor_rotl64(hash, 21);
-  uint32_t r2 = (uint32_t)xor_rotl64(hash, 42);
-
-  answer.h0 = xor_reduce(r0, filter->blockLength);
-  answer.h1 = xor_reduce(r1, filter->blockLength);
-  answer.h2 = xor_reduce(r2, filter->blockLength);
-  return answer;
-}
 static inline uint32_t xor8_get_h0(uint64_t hash, const xor8_t *filter) {
   uint32_t r0 = (uint32_t)hash;
   return xor_reduce(r0, filter->blockLength);
@@ -273,8 +264,6 @@ static inline bool xor_init_buffer(xor_setbuffer_t *buffer, size_t size) {
   if ((buffer->counts == NULL) || (buffer->buffer == NULL)) {
     free(buffer->counts);
     free(buffer->buffer);
-    buffer->counts = NULL;
-    buffer->buffer = NULL;
     return false;
   }
   memset(buffer->counts, 0, buffer->slotcount * sizeof(uint32_t));
@@ -296,11 +285,12 @@ static inline void xor_buffered_increment_counter(uint32_t index, uint64_t hash,
   buffer->buffer[addr].index = index;
   buffer->buffer[addr].hash = hash;
   buffer->counts[slot]++;
+  size_t offset = (slot << buffer->insignificantbits);
   if (buffer->counts[slot] == buffer->slotsize) {
     // must empty the buffer
-    for (size_t i = 0; i < buffer->slotsize; i++) {
+    for (size_t i = offset; i < buffer->slotsize + offset; i++) {
       xor_keyindex_t ki =
-          buffer->buffer[i + (slot << buffer->insignificantbits)];
+          buffer->buffer[i];
       sets[ki.index].xormask ^= ki.hash;
       sets[ki.index].count++;
     }
@@ -313,18 +303,21 @@ static inline void xor_make_buffer_current(xor_setbuffer_t *buffer,
                                            xor_keyindex_t *Q, size_t *Qsize) {
   uint32_t slot = index >> buffer->insignificantbits;
   if(buffer->counts[slot] > 0) { // uncommon!
-    for (size_t i = 0; i < buffer->counts[slot]; i++) {
-      xor_keyindex_t ki = buffer->buffer[i + (slot << buffer->insignificantbits)];
+    size_t qsize = *Qsize;
+    size_t offset = (slot << buffer->insignificantbits);
+    for (size_t i = offset; i < buffer->counts[slot] + offset; i++) {
+      xor_keyindex_t ki = buffer->buffer[i];
       sets[ki.index].xormask ^= ki.hash;
       sets[ki.index].count--;
       if (sets[ki.index].count == 1) {// this branch might be hard to predict
         ki.hash = sets[ki.index].xormask;
-        Q[*Qsize] = ki;
-        *Qsize += 1;
+        Q[qsize] = ki;
+        qsize += 1;
       }
     }
+    *Qsize = qsize;
     buffer->counts[slot] = 0;
-  } 
+  }
 }
 
 
@@ -340,17 +333,20 @@ static inline void xor_buffered_decrement_counter(uint32_t index, uint64_t hash,
   buffer->buffer[addr].hash = hash;
   buffer->counts[slot]++;
   if (buffer->counts[slot] == buffer->slotsize) {
-    for (size_t i = 0; i < buffer->counts[slot]; i++) {
+    size_t qsize = *Qsize;
+    size_t offset = (slot << buffer->insignificantbits);
+    for (size_t i = offset; i < buffer->counts[slot] + offset; i++) {
       xor_keyindex_t ki =
-          buffer->buffer[i + (slot << buffer->insignificantbits)];
+          buffer->buffer[i];
       sets[ki.index].xormask ^= ki.hash;
       sets[ki.index].count--;
       if (sets[ki.index].count == 1) {
         ki.hash = sets[ki.index].xormask;
-        Q[*Qsize] = ki;
-        *Qsize += 1;
+        Q[qsize] = ki;
+        qsize += 1;
       }
     }
+    *Qsize = qsize;
     buffer->counts[slot] = 0;
   }
 }
@@ -358,9 +354,10 @@ static inline void xor_buffered_decrement_counter(uint32_t index, uint64_t hash,
 static inline void xor_flush_increment_buffer(xor_setbuffer_t *buffer,
                                               xor_xorset_t *sets) {
   for (uint32_t slot = 0; slot < buffer->slotcount; slot++) {
-    for (size_t i = 0; i < buffer->counts[slot]; i++) {
+    size_t offset = (slot << buffer->insignificantbits);
+    for (size_t i = offset; i < buffer->counts[slot] + offset; i++) {
       xor_keyindex_t ki =
-          buffer->buffer[i + (slot << buffer->insignificantbits)];
+          buffer->buffer[i];
       sets[ki.index].xormask ^= ki.hash;
       sets[ki.index].count++;
     }
@@ -372,20 +369,22 @@ static inline void xor_flush_decrement_buffer(xor_setbuffer_t *buffer,
                                               xor_xorset_t *sets,
                                               xor_keyindex_t *Q,
                                               size_t *Qsize) {
+  size_t qsize = *Qsize;
   for (uint32_t slot = 0; slot < buffer->slotcount; slot++) {
     uint32_t base = (slot << buffer->insignificantbits);
-    for (size_t i = 0; i < buffer->counts[slot]; i++) {
-      xor_keyindex_t ki = buffer->buffer[i + base];
+    for (size_t i = base; i < buffer->counts[slot] + base; i++) {
+      xor_keyindex_t ki = buffer->buffer[i];
       sets[ki.index].xormask ^= ki.hash;
       sets[ki.index].count--;
       if (sets[ki.index].count == 1) {
         ki.hash = sets[ki.index].xormask;
-        Q[*Qsize] = ki;
-        *Qsize += 1;
+        Q[qsize] = ki;
+        qsize += 1;
       }
     }
     buffer->counts[slot] = 0;
   }
+  *Qsize = qsize;
 }
 
 static inline uint32_t xor_flushone_decrement_buffer(xor_setbuffer_t *buffer,
@@ -401,28 +400,32 @@ static inline uint32_t xor_flushone_decrement_buffer(xor_setbuffer_t *buffer,
     }
   }
   uint32_t slot = bestslot;
+  size_t qsize = *Qsize;
+  // for(uint32_t slot = 0; slot < buffer->slotcount; slot++) {
   uint32_t base = (slot << buffer->insignificantbits);
-  for (size_t i = 0; i < buffer->counts[slot]; i++) {
-    xor_keyindex_t ki = buffer->buffer[i + base];
+  for (size_t i = base; i < buffer->counts[slot] + base; i++) {
+    xor_keyindex_t ki = buffer->buffer[i];
     sets[ki.index].xormask ^= ki.hash;
     sets[ki.index].count--;
     if (sets[ki.index].count == 1) {
       ki.hash = sets[ki.index].xormask;
-      Q[*Qsize] = ki;
-      *Qsize += 1;
+      Q[qsize] = ki;
+      qsize += 1;
     }
   }
+  *Qsize = qsize;
   buffer->counts[slot] = 0;
+  //}
   return bestslot;
 }
 
-//
-// construct the filter, returns true on success, false on failure.
-// most likely, a failure is due to too high a memory usage
-// size is the number of keys
-// the caller is responsable for calling xor8_allocate(size,filter) before
-//
-bool xor8_buffered_populate(const uint64_t *keys, uint32_t size, xor8_t *filter) {
+// Construct the filter, returns true on success, false on failure.
+// The algorithm fails when there is insufficient memory.
+// The caller is responsable for calling binary_fuse8_allocate(size,filter)
+// before. For best performance, the caller should ensure that there are not too
+// many duplicated keys.
+static inline bool xor8_buffered_populate(const uint64_t *keys, uint32_t size, xor8_t *filter) {
+  if(size == 0) { return false; }
   uint64_t rng_counter = 1;
   filter->seed = xor_rng_splitmix64(&rng_counter);
   size_t arrayLength = filter->blockLength * 3; // size of the backing array
@@ -441,26 +444,46 @@ bool xor8_buffered_populate(const uint64_t *keys, uint32_t size, xor8_t *filter)
   xor_xorset_t *sets =
       (xor_xorset_t *)malloc(arrayLength * sizeof(xor_xorset_t));
   xor_xorset_t *sets0 = sets;
-  xor_xorset_t *sets1 = sets + blockLength;
-  xor_xorset_t *sets2 = sets + 2 * blockLength;
 
   xor_keyindex_t *Q =
       (xor_keyindex_t *)malloc(arrayLength * sizeof(xor_keyindex_t));
-  xor_keyindex_t *Q0 = Q;
-  xor_keyindex_t *Q1 = Q + blockLength;
-  xor_keyindex_t *Q2 = Q + 2 * blockLength;
 
   xor_keyindex_t *stack =
       (xor_keyindex_t *)malloc(size * sizeof(xor_keyindex_t));
 
   if ((sets == NULL) || (Q == NULL) || (stack == NULL)) {
+    xor_free_buffer(&buffer0);
+    xor_free_buffer(&buffer1);
+    xor_free_buffer(&buffer2);
     free(sets);
     free(Q);
     free(stack);
     return false;
   }
+  xor_xorset_t *sets1 = sets + blockLength;
+  xor_xorset_t *sets2 = sets + 2 * blockLength;
+  xor_keyindex_t *Q0 = Q;
+  xor_keyindex_t *Q1 = Q + blockLength;
+  xor_keyindex_t *Q2 = Q + 2 * blockLength;
+
+  int iterations = 0;
 
   while (true) {
+    iterations ++;
+    if(iterations > XOR_MAX_ITERATIONS) {
+      // The probability of this happening is lower than the
+      // the cosmic-ray probability (i.e., a cosmic ray corrupts your system),
+      // but if it happens, we just fill the fingerprint with ones which
+      // will flag all possible keys as 'possible', ensuring a correct result.
+      memset(filter->fingerprints, ~0,  3 * filter->blockLength);
+      xor_free_buffer(&buffer0);
+      xor_free_buffer(&buffer1);
+      xor_free_buffer(&buffer2);
+      free(sets);
+      free(Q);
+      free(stack);
+      return false;
+    }
     memset(sets, 0, sizeof(xor_xorset_t) * arrayLength);
     for (size_t i = 0; i < size; i++) {
       uint64_t key = keys[i];
@@ -474,6 +497,7 @@ bool xor8_buffered_populate(const uint64_t *keys, uint32_t size, xor8_t *filter)
     xor_flush_increment_buffer(&buffer0, sets0);
     xor_flush_increment_buffer(&buffer1, sets1);
     xor_flush_increment_buffer(&buffer2, sets2);
+    // todo: the flush should be sync with the detection that follows
     // scan for values with a count of one
     size_t Q0size = 0, Q1size = 0, Q2size = 0;
     for (size_t i = 0; i < filter->blockLength; i++) {
@@ -481,7 +505,7 @@ bool xor8_buffered_populate(const uint64_t *keys, uint32_t size, xor8_t *filter)
         Q0[Q0size].index = i;
         Q0[Q0size].hash = sets0[i].xormask;
         Q0size++;
-      } 
+      }
     }
 
     for (size_t i = 0; i < filter->blockLength; i++) {
@@ -606,13 +630,13 @@ bool xor8_buffered_populate(const uint64_t *keys, uint32_t size, xor8_t *filter)
   return true;
 }
 
-//
-// construct the filter, returns true on success, false on failure.
-// most likely, a failure is due to too high a memory usage
-// size is the number of keys
-// the caller is responsable for calling xor8_allocate(size,filter) before
-//
-bool xor8_populate(const uint64_t *keys, uint32_t size, xor8_t *filter) {
+// Construct the filter, returns true on success, false on failure.
+// The algorithm fails when there is insufficient memory.
+// The caller is responsable for calling binary_fuse8_allocate(size,filter)
+// before. For best performance, the caller should ensure that there are not too
+// many duplicated keys.
+static inline bool xor8_populate(const uint64_t *keys, uint32_t size, xor8_t *filter) {
+  if(size == 0) { return false; }
   uint64_t rng_counter = 1;
   filter->seed = xor_rng_splitmix64(&rng_counter);
   size_t arrayLength = filter->blockLength * 3; // size of the backing array
@@ -620,15 +644,9 @@ bool xor8_populate(const uint64_t *keys, uint32_t size, xor8_t *filter) {
 
   xor_xorset_t *sets =
       (xor_xorset_t *)malloc(arrayLength * sizeof(xor_xorset_t));
-  xor_xorset_t *sets0 = sets;
-  xor_xorset_t *sets1 = sets + blockLength;
-  xor_xorset_t *sets2 = sets + 2 * blockLength;
 
   xor_keyindex_t *Q =
       (xor_keyindex_t *)malloc(arrayLength * sizeof(xor_keyindex_t));
-  xor_keyindex_t *Q0 = Q;
-  xor_keyindex_t *Q1 = Q + blockLength;
-  xor_keyindex_t *Q2 = Q + 2 * blockLength;
 
   xor_keyindex_t *stack =
       (xor_keyindex_t *)malloc(size * sizeof(xor_keyindex_t));
@@ -639,8 +657,29 @@ bool xor8_populate(const uint64_t *keys, uint32_t size, xor8_t *filter) {
     free(stack);
     return false;
   }
+  xor_xorset_t *sets0 = sets;
+  xor_xorset_t *sets1 = sets + blockLength;
+  xor_xorset_t *sets2 = sets + 2 * blockLength;
+  xor_keyindex_t *Q0 = Q;
+  xor_keyindex_t *Q1 = Q + blockLength;
+  xor_keyindex_t *Q2 = Q + 2 * blockLength;
+
+  int iterations = 0;
 
   while (true) {
+    iterations ++;
+    if(iterations > XOR_MAX_ITERATIONS) {
+      // The probability of this happening is lower than the
+      // the cosmic-ray probability (i.e., a cosmic ray corrupts your system),
+      // but if it happens, we just fill the fingerprint with ones which
+      // will flag all possible keys as 'possible', ensuring a correct result.
+      memset(filter->fingerprints, ~0, 3 * filter->blockLength);
+      free(sets);
+      free(Q);
+      free(stack);
+      return false;
+    }
+
     memset(sets, 0, sizeof(xor_xorset_t) * arrayLength);
     for (size_t i = 0; i < size; i++) {
       uint64_t key = keys[i];
@@ -652,6 +691,7 @@ bool xor8_populate(const uint64_t *keys, uint32_t size, xor8_t *filter) {
       sets2[hs.h2].xormask ^= hs.h;
       sets2[hs.h2].count++;
     }
+    // todo: the flush should be sync with the detection that follows
     // scan for values with a count of one
     size_t Q0size = 0, Q1size = 0, Q2size = 0;
     for (size_t i = 0; i < filter->blockLength; i++) {
@@ -797,19 +837,19 @@ bool xor8_populate(const uint64_t *keys, uint32_t size, xor8_t *filter) {
 }
 
 
-//
-// construct the filter, returns true on success, false on failure.
-// most likely, a failure is due to too high a memory usage
-// size is the number of keys
-// the caller is responsable for calling xor16_allocate(size,filter) before
-//
-bool xor16_buffered_populate(const uint64_t *keys, uint32_t size, xor16_t *filter) {
+// Construct the filter, returns true on success, false on failure.
+// The algorithm fails when there is insufficient memory.
+// The caller is responsable for calling binary_fuse8_allocate(size,filter)
+// before. For best performance, the caller should ensure that there are not too
+// many duplicated keys.
+static inline bool xor16_buffered_populate(const uint64_t *keys, uint32_t size, xor16_t *filter) {
+  if(size == 0) { return false; }
   uint64_t rng_counter = 1;
   filter->seed = xor_rng_splitmix64(&rng_counter);
   size_t arrayLength = filter->blockLength * 3; // size of the backing array
   xor_setbuffer_t buffer0, buffer1, buffer2;
   size_t blockLength = filter->blockLength;
-  bool ok0 = xor_init_buffer(&buffer0, blockLength); 
+  bool ok0 = xor_init_buffer(&buffer0, blockLength);
   bool ok1 =  xor_init_buffer(&buffer1, blockLength);
   bool ok2 =  xor_init_buffer(&buffer2, blockLength);
   if (!ok0 || !ok1 || !ok2) {
@@ -821,27 +861,48 @@ bool xor16_buffered_populate(const uint64_t *keys, uint32_t size, xor16_t *filte
 
   xor_xorset_t *sets =
       (xor_xorset_t *)malloc(arrayLength * sizeof(xor_xorset_t));
-  xor_xorset_t *sets0 = sets;
-  xor_xorset_t *sets1 = sets + blockLength;
-  xor_xorset_t *sets2 = sets + 2 * blockLength;
 
   xor_keyindex_t *Q =
       (xor_keyindex_t *)malloc(arrayLength * sizeof(xor_keyindex_t));
-  xor_keyindex_t *Q0 = Q;
-  xor_keyindex_t *Q1 = Q + blockLength;
-  xor_keyindex_t *Q2 = Q + 2 * blockLength;
 
   xor_keyindex_t *stack =
       (xor_keyindex_t *)malloc(size * sizeof(xor_keyindex_t));
 
   if ((sets == NULL) || (Q == NULL) || (stack == NULL)) {
+    xor_free_buffer(&buffer0);
+    xor_free_buffer(&buffer1);
+    xor_free_buffer(&buffer2);
     free(sets);
     free(Q);
     free(stack);
     return false;
   }
+  xor_xorset_t *sets0 = sets;
+  xor_xorset_t *sets1 = sets + blockLength;
+  xor_xorset_t *sets2 = sets + 2 * blockLength;
+  xor_keyindex_t *Q0 = Q;
+  xor_keyindex_t *Q1 = Q + blockLength;
+  xor_keyindex_t *Q2 = Q + 2 * blockLength;
+
+  int iterations = 0;
 
   while (true) {
+    iterations ++;
+    if(iterations > XOR_MAX_ITERATIONS) {
+      // The probability of this happening is lower than the
+      // the cosmic-ray probability (i.e., a cosmic ray corrupts your system),
+      // but if it happens, we just fill the fingerprint with ones which
+      // will flag all possible keys as 'possible', ensuring a correct result.
+      memset(filter->fingerprints, ~0, 3 * filter->blockLength * sizeof(uint16_t));
+      xor_free_buffer(&buffer0);
+      xor_free_buffer(&buffer1);
+      xor_free_buffer(&buffer2);
+      free(sets);
+      free(Q);
+      free(stack);
+      return false;
+    }
+
     memset(sets, 0, sizeof(xor_xorset_t) * arrayLength);
     for (size_t i = 0; i < size; i++) {
       uint64_t key = keys[i];
@@ -855,6 +916,7 @@ bool xor16_buffered_populate(const uint64_t *keys, uint32_t size, xor16_t *filte
     xor_flush_increment_buffer(&buffer0, sets0);
     xor_flush_increment_buffer(&buffer1, sets1);
     xor_flush_increment_buffer(&buffer2, sets2);
+    // todo: the flush should be sync with the detection that follows
     // scan for values with a count of one
     size_t Q0size = 0, Q1size = 0, Q2size = 0;
     for (size_t i = 0; i < filter->blockLength; i++) {
@@ -989,13 +1051,13 @@ bool xor16_buffered_populate(const uint64_t *keys, uint32_t size, xor16_t *filte
 
 
 
-//
-// construct the filter, returns true on success, false on failure.
-// most likely, a failure is due to too high a memory usage
-// size is the number of keys
-// the caller is responsable for calling xor16_allocate(size,filter) before
-//
-bool xor16_populate(const uint64_t *keys, uint32_t size, xor16_t *filter) {
+// Construct the filter, returns true on success, false on failure.
+// The algorithm fails when there is insufficient memory.
+// The caller is responsable for calling binary_fuse8_allocate(size,filter)
+// before. For best performance, the caller should ensure that there are not too
+// many duplicated keys.
+static inline bool xor16_populate(const uint64_t *keys, uint32_t size, xor16_t *filter) {
+  if(size == 0) { return false; }
   uint64_t rng_counter = 1;
   filter->seed = xor_rng_splitmix64(&rng_counter);
   size_t arrayLength = filter->blockLength * 3; // size of the backing array
@@ -1003,15 +1065,9 @@ bool xor16_populate(const uint64_t *keys, uint32_t size, xor16_t *filter) {
 
   xor_xorset_t *sets =
       (xor_xorset_t *)malloc(arrayLength * sizeof(xor_xorset_t));
-  xor_xorset_t *sets0 = sets;
-  xor_xorset_t *sets1 = sets + blockLength;
-  xor_xorset_t *sets2 = sets + 2 * blockLength;
 
   xor_keyindex_t *Q =
       (xor_keyindex_t *)malloc(arrayLength * sizeof(xor_keyindex_t));
-  xor_keyindex_t *Q0 = Q;
-  xor_keyindex_t *Q1 = Q + blockLength;
-  xor_keyindex_t *Q2 = Q + 2 * blockLength;
 
   xor_keyindex_t *stack =
       (xor_keyindex_t *)malloc(size * sizeof(xor_keyindex_t));
@@ -1022,8 +1078,30 @@ bool xor16_populate(const uint64_t *keys, uint32_t size, xor16_t *filter) {
     free(stack);
     return false;
   }
+  xor_xorset_t *sets0 = sets;
+  xor_xorset_t *sets1 = sets + blockLength;
+  xor_xorset_t *sets2 = sets + 2 * blockLength;
+
+  xor_keyindex_t *Q0 = Q;
+  xor_keyindex_t *Q1 = Q + blockLength;
+  xor_keyindex_t *Q2 = Q + 2 * blockLength;
+
+  int iterations = 0;
 
   while (true) {
+    iterations ++;
+    if(iterations > XOR_MAX_ITERATIONS) {
+      // The probability of this happening is lower than the
+      // the cosmic-ray probability (i.e., a cosmic ray corrupts your system),
+      // but if it happens, we just fill the fingerprint with ones which
+      // will flag all possible keys as 'possible', ensuring a correct result.
+      memset(filter->fingerprints, ~0, 3 * filter->blockLength * sizeof(uint16_t));
+      free(sets);
+      free(Q);
+      free(stack);
+      return true;
+    }
+
     memset(sets, 0, sizeof(xor_xorset_t) * arrayLength);
     for (size_t i = 0; i < size; i++) {
       uint64_t key = keys[i];
@@ -1035,6 +1113,7 @@ bool xor16_populate(const uint64_t *keys, uint32_t size, xor16_t *filter) {
       sets2[hs.h2].xormask ^= hs.h;
       sets2[hs.h2].count++;
     }
+    // todo: the flush should be sync with the detection that follows
     // scan for values with a count of one
     size_t Q0size = 0, Q1size = 0, Q2size = 0;
     for (size_t i = 0; i < filter->blockLength; i++) {
@@ -1067,6 +1146,7 @@ bool xor16_populate(const uint64_t *keys, uint32_t size, xor16_t *filter) {
         size_t index = keyindex.index;
         if (sets0[index].count == 0)
           continue; // not actually possible after the initial scan.
+        //sets0[index].count = 0;
         uint64_t hash = keyindex.hash;
         uint32_t h1 = xor16_get_h1(hash, filter);
         uint32_t h2 = xor16_get_h2(hash, filter);
