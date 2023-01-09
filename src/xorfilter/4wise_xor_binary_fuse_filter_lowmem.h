@@ -192,7 +192,8 @@ Status XorBinaryFuseFilter<ItemType, FingerprintType, HashFamily>::AddAll(
       // we have a possible counter overflow
       // this branch is never taken except if there is a problem in the hash code
       // in which case construction fails
-      continue;
+      memset(fingerprints, ~0, arrayLength * sizeof(FingerprintType));
+      return Ok;
     }
     reverseOrderPos = 0;
     size_t alonePos = 0;
