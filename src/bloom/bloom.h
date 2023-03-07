@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <assert.h>
 #include <sstream>
+#include <climits>
 
 #include "hashutil.h"
 
