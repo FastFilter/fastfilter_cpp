@@ -7,7 +7,9 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
-      - name: Use cmake
+      - name: Run tests
         run: |
           cd tests && make && ./unit
-          cd benchmark && make
+      - name: Build benchmarks
+        run: |
+          cd benchmarks && make
