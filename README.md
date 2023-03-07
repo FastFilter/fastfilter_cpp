@@ -1,4 +1,5 @@
 # fastfilter_cpp
+[![Ubuntu 22.04 CI (GCC 11)](https://github.com/FastFilter/fastfilter_cpp/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/FastFilter/fastfilter_cpp/actions/workflows/ubuntu.yml)
 
 Fast Filter: Fast approximate membership filter implementations (C++)
 

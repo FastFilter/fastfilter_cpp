@@ -1,0 +1,15 @@
+name: Ubuntu 22.04 CI (GCC 11)
+
+on: [push, pull_request]
+
+jobs:
+  ubuntu-build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run tests
+        run: |
+          cd tests && make && ./unit
+      - name: Build benchmarks
+        run: |
+          cd benchmarks && make
