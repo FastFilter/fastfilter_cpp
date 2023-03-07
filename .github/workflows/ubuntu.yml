@@ -9,4 +9,4 @@ jobs:
       - uses: actions/checkout@v3
       - name: Use cmake
         run: |
-          cd test && make && ./unit
+          cd tests && make && ./unit
