@@ -19,7 +19,7 @@ bool check_bloom() {
 		if (ans != 1) { cnt++; }
 	}
     double rate = double(cnt)/count;
-	std::cout << double(cnt)/count << std::endl;
+    std::cout << rate << std::endl;
     return rate < 0.00018;
 }
 
