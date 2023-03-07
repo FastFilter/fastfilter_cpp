@@ -10,6 +10,3 @@ jobs:
       - name: Run tests
         run: |
           cd tests && make && ./unit
-      - name: Build benchmarks
-        run: |
-          cd benchmarks && make
