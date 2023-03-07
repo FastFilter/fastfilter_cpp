@@ -26,6 +26,7 @@ size_t calculateSegmentLength(size_t arity, size_t size) {
 }
 
 double calculateSizeFactor(size_t arity, size_t size) {
+  if(size <= 2) { size = 2; }
   double sizeFactor;
   if (arity == 3) {
     sizeFactor = fmax(1.125, 0.875 + 0.25 * log(1000000) / log(size));
