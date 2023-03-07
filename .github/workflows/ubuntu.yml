@@ -10,3 +10,4 @@ jobs:
       - name: Use cmake
         run: |
           cd tests && make && ./unit
+          cd benchmarks && make
