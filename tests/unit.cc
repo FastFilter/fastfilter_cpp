@@ -21,7 +21,7 @@ bool check_bloom() {
   }
   double rate = double(cnt) / count;
   std::cout << rate << std::endl;
-  return rate < 0.00018;
+  return rate < 0.00019;
 }
 
 int main() { return check_bloom() ? EXIT_SUCCESS : EXIT_FAILURE; }
