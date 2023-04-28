@@ -1169,7 +1169,7 @@ namespace CompressedCuckoo{
     else if(!_morton_filter_functionality_enabled){
       hash_t secondary_bucket = determine_alternate_bucket(primary_bucket,
         fingerprint);
-      return table_read_and_compare(primary_bucket, fingerprint) |
+      return table_read_and_compare(primary_bucket, fingerprint) ||
         table_read_and_compare(secondary_bucket, fingerprint);
     }
 
@@ -1622,7 +1622,7 @@ namespace CompressedCuckoo{
       switch(_insertion_method){
         case InsertionMethodEnum::FIRST_FIT_OPT:
           try_first_block_insert[i] = (elements_in_blocks_1[i] !=
-            _max_fingerprints_per_block) | (elements_in_blocks_2[i] ==
+            _max_fingerprints_per_block) || (elements_in_blocks_2[i] ==
             _max_fingerprints_per_block);
           break;
         default: // HYBRID_PIECEWISE, TWO_CHOICE
@@ -1723,7 +1723,7 @@ namespace CompressedCuckoo{
     for(uint32_t i = 0; i < batch_size; i++){
       counter_values[i] = read_counter(block_ids[i], counter_indexes[i]);
       statuses[offset + i] = !((elements_in_blocks[i] ==
-        _max_fingerprints_per_block) | (counter_values[i] == _slots_per_bucket));
+        _max_fingerprints_per_block) || (counter_values[i] == _slots_per_bucket));
 
       if(statuses[offset + i]){
         write_fingerprint_left_displace(_storage[block_ids[i]],

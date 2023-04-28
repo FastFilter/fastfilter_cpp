@@ -305,9 +305,9 @@ Status GcsFilter<ItemType, bits_per_item, HashFamily>::AddAll(
     qsort(data, len, sizeof(uint64_t), compare_uint64);
     size_t bucketslen = 10L * fingerprintBits * len / 64;
     uint64_t* buckets = new uint64_t[bucketslen];
-    memset(buckets, 0, sizeof(uint64_t[bucketslen]));
+    memset(buckets, 0, sizeof(uint64_t) * bucketslen);
     uint32_t* startList = new uint32_t[bucketCount + 1];
-    memset(startList, 0, sizeof(uint32_t[bucketCount + 1]));
+    memset(startList, 0, sizeof(uint32_t) * (bucketCount + 1));
     int bucket = 0;
     long last = 0;
     int pos = 0;

@@ -148,12 +148,12 @@ Status XorBinaryFuseFilter<ItemType, FingerprintType, HashFamily>::AddAll(
   hi0123[6] = 2;
 
   while (true) {
-    memset(t2count, 0, sizeof(uint8_t[arrayLength]));
-    memset(t2hash, 0, sizeof(uint64_t[arrayLength]));
+    memset(t2count, 0, sizeof(uint8_t) * arrayLength);
+    memset(t2hash, 0, sizeof(uint64_t) * arrayLength);
 
     // counting sort
 
-    memset(reverseOrder, 0, sizeof(uint64_t[size]));
+    memset(reverseOrder, 0, sizeof(uint64_t) * size);
     reverseOrder[size] = 1;
 
     int blockBits = 1;

@@ -52,7 +52,7 @@ public:
         countsArraySize = numCounts + 1;
         counts = new uint64_t[countsArraySize];
         // just to be sure
-        memset(counts, 0, sizeof(uint64_t[countsArraySize]));
+        memset(counts, 0, sizeof(uint64_t) * countsArraySize);
         uint64_t c = 0;
         uint64_t pos = 0;
         for (uint64_t i = 0; i < numWords; i += 8, pos += 2) {
@@ -220,7 +220,6 @@ Status XorFilterPlus<ItemType, FingerprintType, HashFamily>::AddAll(
     uint64_t* reverseOrder = new uint64_t[size];
     uint8_t* reverseH = new uint8_t[size];
     size_t reverseOrderPos;
-    int hashIndex = 0;
     t2val_t * t2vals = new t2val_t[m];
     while (true) {
         memset(t2vals, 0, sizeof(t2val_t[m]));
@@ -304,10 +303,6 @@ Status XorFilterPlus<ItemType, FingerprintType, HashFamily>::AddAll(
         if (reverseOrderPos == size) {
             break;
         }
-
-
-        hashIndex++;
-
         // use a new random numbers
         delete hasher;
         hasher = new HashFamily();

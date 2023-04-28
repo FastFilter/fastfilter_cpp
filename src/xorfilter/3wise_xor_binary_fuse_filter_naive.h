@@ -124,7 +124,6 @@ Status XorBinaryFuseFilter<ItemType, FingerprintType, HashFamily>::AddAll(
   t2val_t *t2vals = new t2val_t[arrayLength];
 
   size_t *alone = new size_t[arrayLength];
-  size_t hashIndex{0};
 
   while (true) {
     memset(t2vals, 0, sizeof(t2val_t[arrayLength]));
@@ -170,7 +169,6 @@ Status XorBinaryFuseFilter<ItemType, FingerprintType, HashFamily>::AddAll(
     if (reverseOrderPos == size) {
       break;
     }
-    hashIndex++;
     // use a new random numbers
     delete hasher;
     hasher = new HashFamily();

@@ -385,7 +385,6 @@ Status XorFilter<ItemType, FingerprintType, HashFamily>::AddAll(
     uint64_t* reverseOrder = new uint64_t[size];
     uint8_t* reverseH = new uint8_t[size];
     size_t reverseOrderPos;
-    int hashIndex = 0;
     t2val_t * t2vals = new t2val_t[m];
     size_t* alone = new size_t[arrayLength];
     while (true) {        
@@ -430,7 +429,6 @@ Status XorFilter<ItemType, FingerprintType, HashFamily>::AddAll(
         if (reverseOrderPos == size) {
             break;
         }
-        hashIndex++;
         // use a new random numbers
         delete hasher;
         hasher = new HashFamily();
