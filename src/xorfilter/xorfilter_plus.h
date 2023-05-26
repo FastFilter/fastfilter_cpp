@@ -27,10 +27,6 @@ inline int mostSignificantBit(uint64_t x) {
     return 63 - numberOfLeadingZeros64(x);
 }
 
-inline int bitCount64(uint64_t x) {
-    return __builtin_popcountll(x);
-}
-
 class Rank9 {
 
     uint64_t* bits;
@@ -58,11 +54,11 @@ public:
         for (uint64_t i = 0; i < numWords; i += 8, pos += 2) {
             counts[pos] = c;
             counts[pos + 1] = 0;
-            c += bitCount64(bits[i]);
+            c += __builtin_popcountll(bits[i]);
             for (uint64_t j = 1; j < 8; j++) {
                 counts[pos + 1] |= (c - counts[pos]) << 9 * (j - 1);
                 if (i + j < numWords) {
-                    c += bitCount64(bits[i + j]);
+                    c += __builtin_popcountll(bits[i + j]);
                 }
             }
         }
@@ -80,7 +76,7 @@ public:
         int32_t offset = (word & 7) - 1;
         return counts[block] +
                 ((counts[block + 1] >> (offset + ((offset >> 28) & 8)) * 9) & 0x1ff) +
-                bitCount64(bits[word] & ((1L << (pos & 63)) - 1));
+                __builtin_popcountll(bits[word] & ((1L << (pos & 63)) - 1));
     }
 
     uint64_t get(uint64_t pos) {
@@ -90,7 +86,7 @@ public:
     uint64_t getAndPartialRank(uint64_t pos) {
         uint64_t word = pos >> 6;
         uint64_t x = bits[word];
-        return ((bitCount64(x & ((1L << (pos & 63)) - 1))) << 1) +
+        return ((__builtin_popcountll(x & ((1L << (pos & 63)) - 1))) << 1) +
                 ((x >> (pos & 63)) & 1);
     }
 

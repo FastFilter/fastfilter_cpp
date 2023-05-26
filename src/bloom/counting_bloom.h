@@ -15,7 +15,6 @@ using namespace hashing;
 
 namespace counting_bloomfilter {
 
-#define bitCount64(x) __builtin_popcountll(x)
 
 #if defined(__BMI2__)
 
@@ -487,7 +486,7 @@ void SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily
         data[group] |= 1ULL << bit;
     } else {
         data[group] |= 1ULL << bit;
-        int bitsBefore = bitCount64(m & (0xffffffffffffffffULL >> (63 - bit)));
+        int bitsBefore = __builtin_popcountll(m & (0xffffffffffffffffULL >> (63 - bit)));
         int before = select64((c << 1) | 1, bitsBefore);
         int d = (m >> bit) & 1;
         int insertAt = before - d;
@@ -522,7 +521,7 @@ int SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily,
         n >>= 4 * (bit & 0xf);
         return (int) (n & 15);
     }
-    int bitsBefore = bitCount64(m & (0xffffffffffffffffULL >> (63 - bit)));
+    int bitsBefore = __builtin_popcountll(m & (0xffffffffffffffffULL >> (63 - bit)));
     int bitPos = select64(c, bitsBefore - 1);
     uint64_t y = ((c << (63 - bitPos)) << 1) | (1ULL << (63 - bitPos));
     return numberOfLeadingZeros64(y) + 1;
@@ -564,7 +563,7 @@ void SuccinctCountingBloomFilter<ItemType, bits_per_item, branchless, HashFamily
             nextFreeOverflow = index;
         }
     } else {
-        int bitsBefore = bitCount64(m & (0xffffffffffffffffULL >> (63 - bit)));
+        int bitsBefore = __builtin_popcountll(m & (0xffffffffffffffffULL >> (63 - bit)));
         int before = select64((c << 1) | 1, bitsBefore) - 1;
         int removeAt = max(0, before - 1);
         // remove the bit from the counter
@@ -742,7 +741,7 @@ void SuccinctCountingBlockedBloomFilter<ItemType, bits_per_item, HashFamily, k>:
         data[group] |= 1ULL << bit;
     } else {
         data[group] |= 1ULL << bit;
-        int bitsBefore = bitCount64(m & (0xffffffffffffffffULL >> (63 - bit)));
+        int bitsBefore = __builtin_popcountll(m & (0xffffffffffffffffULL >> (63 - bit)));
         int before = select64((c << 1) | 1, bitsBefore);
         int d = (m >> bit) & 1;
         int insertAt = before - d;
@@ -787,7 +786,7 @@ int SuccinctCountingBlockedBloomFilter<ItemType, bits_per_item, HashFamily, k>::
         n >>= 8 * (bit & 0xff);
         return (int) (n & 0xff);
     }
-    int bitsBefore = bitCount64(m & (0xffffffffffffffffULL >> (63 - bit)));
+    int bitsBefore = __builtin_popcountll(m & (0xffffffffffffffffULL >> (63 - bit)));
     int bitPos = select64(c, bitsBefore - 1);
     uint64_t y = ((c << (63 - bitPos)) << 1) | (1ULL << (63 - bitPos));
     return numberOfLeadingZeros64(y) + 1;
@@ -846,7 +845,7 @@ void SuccinctCountingBlockedBloomFilter<ItemType, bits_per_item, HashFamily, k>:
             nextFreeOverflow = index;
         }
     } else {
-        int bitsBefore = bitCount64(m & (0xffffffffffffffffULL >> (63 - bit)));
+        int bitsBefore = __builtin_popcountll(m & (0xffffffffffffffffULL >> (63 - bit)));
         int before = select64((c << 1) | 1, bitsBefore) - 1;
         int removeAt = max(0, before - 1);
         // remove the bit from the counter
@@ -1006,8 +1005,8 @@ void SuccinctCountingBlockedBloomRankFilter<ItemType, bits_per_item, HashFamily,
         data[group] |= 1L << x;
         return;
     }
-    int bitsSet = bitCount64(m);
-    int bitsBefore = x == 0 ? 0 : bitCount64(m << (64 - x));
+    int bitsSet = __builtin_popcountll(m);
+    int bitsBefore = x == 0 ? 0 : __builtin_popcountll(m << (64 - x));
     int insertAt = bitsBefore;
     if (d == 1) {
         int startLevel = 0;
@@ -1024,14 +1023,14 @@ void SuccinctCountingBlockedBloomRankFilter<ItemType, bits_per_item, HashFamily,
                 insertAt = 64;
                 break;
             }
-            bitsSet = bitCount64(bitsForLevel);
-            bitsBefore = insertAt == 0 ? 0 : bitCount64(bitsForLevel << (64 - insertAt));
+            bitsSet = __builtin_popcountll(bitsForLevel);
+            bitsBefore = insertAt == 0 ? 0 : __builtin_popcountll(bitsForLevel << (64 - insertAt));
             insertAt = startLevel + bitsBefore;
         }
         // bit is not set: set it, and insert a space in the next level if needed
         c |= 1L << insertAt;
-        int bitsBeforeLevel = insertAt == 0 ? 0 : bitCount64(bitsForLevel << (64 - insertAt));
-        int bitsSetLevel = bitCount64(bitsForLevel);
+        int bitsBeforeLevel = insertAt == 0 ? 0 : __builtin_popcountll(bitsForLevel << (64 - insertAt));
+        int bitsSetLevel = __builtin_popcountll(bitsForLevel);
         insertAt = startLevel + bitsSet + bitsBeforeLevel;
         bitsSet = bitsSetLevel;
     }
@@ -1105,9 +1104,9 @@ int SuccinctCountingBlockedBloomRankFilter<ItemType, bits_per_item, HashFamily, 
     if (c == 0) {
         return 1;
     }
-    int bitsSet = bitCount64(m);
+    int bitsSet = __builtin_popcountll(m);
     x &= 63;
-    int bitsBefore = x == 0 ? 0 : bitCount64(m << (64 - x));
+    int bitsBefore = x == 0 ? 0 : __builtin_popcountll(m << (64 - x));
     int count = 1;
     int insertAt = bitsBefore;
     while (true) {
@@ -1119,8 +1118,8 @@ int SuccinctCountingBlockedBloomRankFilter<ItemType, bits_per_item, HashFamily, 
             count++;
             // at this level, the bit is already set: loop until it's not set
             c >>= bitsSet;
-            bitsSet = bitCount64(bitsForLevel);
-            bitsBefore = insertAt == 0 ? 0 : bitCount64(bitsForLevel << (64 - insertAt));
+            bitsSet = __builtin_popcountll(bitsForLevel);
+            bitsBefore = insertAt == 0 ? 0 : __builtin_popcountll(bitsForLevel << (64 - insertAt));
             insertAt = bitsBefore;
         } else {
             break;
@@ -1205,9 +1204,9 @@ void SuccinctCountingBlockedBloomRankFilter<ItemType, bits_per_item, HashFamily,
         return;
     }
     // number of bits in the counter at this level
-    int bitsSet = bitCount64(m);
+    int bitsSet = __builtin_popcountll(m);
     // number of bits before the bit to test (at the current level)
-    int bitsBefore = x == 0 ? 0 : bitCount64(m << (64 - x));
+    int bitsBefore = x == 0 ? 0 : __builtin_popcountll(m << (64 - x));
     // the point where the bit should be removed (remove 0), or reset
     int removeAt = bitsBefore;
     uint64_t d = (c >> bitsBefore) & 1;
@@ -1226,8 +1225,8 @@ void SuccinctCountingBlockedBloomRankFilter<ItemType, bits_per_item, HashFamily,
             }
             // at this level, the bit is already set: loop until it's not set
             startLevel += bitsSet;
-            bitsSet = bitCount64(bitsForLevel);
-            bitsBefore = removeAt == 0 ? 0 : bitCount64(bitsForLevel << (64 - removeAt));
+            bitsSet = __builtin_popcountll(bitsForLevel);
+            bitsBefore = removeAt == 0 ? 0 : __builtin_popcountll(bitsForLevel << (64 - removeAt));
             resetAt = removeAt;
             removeAt = startLevel + bitsBefore;
             if (removeAt > 63) {

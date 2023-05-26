@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include <cstdint>
 #include <chrono>
+#include <cstdint>
 
 ::std::uint64_t NowNanos() {
   return ::std::chrono::duration_cast<::std::chrono::nanoseconds>(

@@ -1,13 +1,13 @@
 #ifndef VQ_FILTER_VQ_FILTER_H_
 #define VQ_FILTER_VQ_FILTER_H_
 
-#include <assert.h>
 #include <algorithm>
+#include <assert.h>
 
 #include "hashutil.h"
 
-#include "vqf_filter.h"
 #include "vqf_filter.c"
+#include "vqf_filter.h"
 
 using namespace std;
 using namespace hashing;
@@ -33,18 +33,18 @@ class VQFilter {
   HashFamily hasher;
 
   double BitsPerItem() const { return bitsPerItem; }
-  
+
   void ApplyBlock(uint64_t *tmp, int block, int len);
 
- public:
+public:
   explicit VQFilter(const size_t n) : hasher() {
 
 #ifdef SORTED_ADD
     // when inserting in sorted order
-    uint64_t nslots = (uint64_t) (n / 0.85);
+    uint64_t nslots = (uint64_t)(n / 0.85);
 #else
     // when inserting in random order
-    uint64_t nslots = (uint64_t) (n / 0.93);
+    uint64_t nslots = (uint64_t)(n / 0.93);
 #endif
 
     if ((filter = vqf_init(nslots)) == NULL) {
@@ -53,24 +53,22 @@ class VQFilter {
     }
     range = filter->metadata.range;
     bytesUsed = filter->metadata.total_size_in_bytes;
-    bitsPerItem = (double) bytesUsed / n;
-
+    bitsPerItem = (double)bytesUsed / n;
   }
 
-  ~VQFilter() {
-      free(filter);
-  }
+  ~VQFilter() { free(filter); }
 
   // Add an item to the filter.
   Status Add(const ItemType &item);
-  
-  Status AddAll(const vector<ItemType> &data, const size_t start, const size_t end) {
+
+  Status AddAll(const vector<ItemType> &data, const size_t start,
+                const size_t end) {
     return AddAll(data.data(), start, end);
   }
 
   // Add an item to the filter.
   Status AddAll(const ItemType *data, const size_t start, const size_t end);
-  
+
   // Report if the item is inserted, with false positive rate.
   Status Contain(const ItemType &item) const;
 
@@ -86,45 +84,45 @@ class VQFilter {
 };
 
 template <typename ItemType, typename HashFamily>
-Status VQFilter<ItemType, HashFamily>::Add(
-    const ItemType &key) {
-    uint64_t hash = hasher(key);
-    bool ret = vqf_insert(filter, hash);
-    if (!ret) {
-        std::cout << "failed insertion for key.\n";
-        abort();
-    }
-    return Ok;
+Status VQFilter<ItemType, HashFamily>::Add(const ItemType &key) {
+  uint64_t hash = hasher(key);
+  bool ret = vqf_insert(filter, hash);
+  if (!ret) {
+    std::cout << "failed insertion for key.\n";
+    abort();
+  }
+  return Ok;
 }
 
 template <typename ItemType, typename HashFamily>
-Status VQFilter<ItemType, HashFamily>::Contain(
-    const ItemType &key) const {
-    uint64_t hash = hasher(key);
-    bool ret = vqf_is_present(filter, hash);
-    return ret ? Ok : NotFound;
+Status VQFilter<ItemType, HashFamily>::Contain(const ItemType &key) const {
+  uint64_t hash = hasher(key);
+  bool ret = vqf_is_present(filter, hash);
+  return ret ? Ok : NotFound;
 }
 
 const int blockShift = 15;
 const int blockLen = 1 << blockShift;
 
 template <typename ItemType, typename HashFamily>
-void VQFilter<ItemType, HashFamily>::ApplyBlock(uint64_t *tmp, int block, int len) {
+void VQFilter<ItemType, HashFamily>::ApplyBlock(uint64_t *tmp, int block,
+                                                int len) {
   // std::cout << "addAll ApplyBlock block " << block << " len " << len << "\n";
   for (int i = 0; i < len; i++) {
     uint64_t hash = tmp[(block << blockShift) + i];
     // std::cout << "inserting " << hash << "\n";
     bool ret = vqf_insert(filter, hash);
     if (!ret) {
-        std::cout << "failed insertion for key.\n";
-        abort();
+      std::cout << "failed insertion for key.\n";
+      abort();
     }
   }
 }
 
 template <typename ItemType, typename HashFamily>
-Status VQFilter<ItemType, HashFamily>::AddAll(
-    const ItemType* keys, const size_t start, const size_t end) {
+Status VQFilter<ItemType, HashFamily>::AddAll(const ItemType *keys,
+                                              const size_t start,
+                                              const size_t end) {
 #ifdef SORTED_ADD
   int blocks = 1 + (end - start) / blockLen;
   uint64_t *tmp = new uint64_t[blocks * blockLen];
@@ -177,5 +175,5 @@ std::string VQFilter<ItemType, HashFamily>::Info() const {
   }
   return ss.str();
 }
-}  // namespace vqfilter
-#endif  // VQ_FILTER_VQ_FILTER_H_
+} // namespace vqfilter
+#endif // VQ_FILTER_VQ_FILTER_H_

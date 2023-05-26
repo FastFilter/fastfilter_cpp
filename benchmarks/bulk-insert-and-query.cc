@@ -439,6 +439,7 @@ int main(int argc, char * argv[]) {
   };
 
   // Parameter Parsing ----------------------------------------------------------
+  const char * add_count_str;
 
   if (argc < 2) {
     cout << "Usage: " << argv[0] << " <numberOfEntries> [<algorithmId> [<seed>]]" << endl;
@@ -450,13 +451,16 @@ int main(int argc, char * argv[]) {
     }
     cout << " algorithmId: can also be set to the string 'all' if you want to run them all, including some that are excluded by default" << endl;
     cout << " seed: seed for the PRNG; -1 for random seed (default)" << endl;
-    return 1;
+    cout << endl;
+    add_count_str = "10000000";  
+  } else {
+    add_count_str = argv[1];
   }
-  stringstream input_string(argv[1]);
+  stringstream input_string(add_count_str);
   size_t add_count;
   input_string >> add_count;
   if (input_string.fail()) {
-    cerr << "Invalid number: " << argv[1];
+    cerr << "Invalid number: " << add_count_str << endl;
     return 2;
   }
   int algorithmId = -1; // -1 is just the default
@@ -737,7 +741,7 @@ int main(int argc, char * argv[]) {
       cout << setw(NAME_WIDTH) << names[a] << cf << endl;
   }
   a = 31;
-  if (algorithmId == a || algorithmId < 0 || (algos.find(a) != algos.end())) {
+  if (algorithmId == a || (algos.find(a) != algos.end())) {
      auto cf = FilterBenchmark<
           VQFilter<uint64_t, SimpleMixSplit>>(
           add_count, to_add, intersectionsize, mixed_sets,  true, false);
@@ -746,7 +750,7 @@ int main(int argc, char * argv[]) {
 #endif
 #if __PF_AVX512__
   a = 32;
-  if (algorithmId == a || algorithmId < 0 || (algos.find(a) != algos.end())) {
+  if (algorithmId == a || (algos.find(a) != algos.end())) {
       auto cf = FilterBenchmark<
             TC_shortcut<SimpleMixSplit>>(
             add_count, to_add, intersectionsize, mixed_sets, false, false /* set to true to support deletions. */); 
@@ -754,21 +758,21 @@ int main(int argc, char * argv[]) {
   }
   // Prefix ---------------------------------------------------------
     a = 35;
-    if (algorithmId == a || algorithmId < 0 || (algos.find(a) != algos.end())) {
+    if (algorithmId == a || (algos.find(a) != algos.end())) {
         auto cf = FilterBenchmark<
                 Prefix_Filter<TC_shortcut<SimpleMixSplit>>>(
                 add_count, to_add, intersectionsize, mixed_sets,  false, false);
         cout << setw(NAME_WIDTH) << names[a] << cf << endl;
     }
     a = 36;
-    if (algorithmId == a || algorithmId < 0 || (algos.find(a) != algos.end())) {
+    if (algorithmId == a || (algos.find(a) != algos.end())) {
         auto cf = FilterBenchmark<
                 Prefix_Filter<CuckooFilterStable<uint64_t, 12, SingleTable, SimpleMixSplit>>>(
                 add_count, to_add, intersectionsize, mixed_sets,  false, false);
         cout << setw(NAME_WIDTH) << names[a] << cf << endl;
     }
     a = 37;
-    if (algorithmId == a || algorithmId < 0 || (algos.find(a) != algos.end())) {
+    if (algorithmId == a || (algos.find(a) != algos.end())) {
         auto cf = FilterBenchmark<
                 Prefix_Filter<SimdBlockFilterFixed<SimpleMixSplit>>>(
                 add_count, to_add, intersectionsize, mixed_sets,  false, false);
