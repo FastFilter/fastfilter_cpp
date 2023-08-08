@@ -16,6 +16,7 @@
 #include "linux-perf-events.h"
 #endif
 #include "filterapi.h"
+#include <algorithm>
 
 // The number of items sampled when determining the lookup performance
 const size_t MAX_SAMPLE_SIZE = 10 * 1000 * 1000;
@@ -118,16 +119,7 @@ size_t match_size_iter(InputIt1 first1, InputIt1 last1,
 
 template<class InputIt>
 size_t count_distinct(InputIt first, InputIt last) {
-    if(last  == first) return 0;
-    size_t answer = 1;
-    auto val = *first;
-    first++;
-
-    while (first != last) {
-      if(val != *first) ++answer;
-      first++;
-    }
-    return answer;
+    return std::distance(first, std::unique(first, last));
 }
 
 size_t match_size(vector<uint64_t> a,  vector<uint64_t> b, size_t * distincta, size_t * distinctb) {
