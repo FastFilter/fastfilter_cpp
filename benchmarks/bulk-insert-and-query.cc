@@ -156,7 +156,7 @@ typedef struct samples samples_t;
 
 template <typename Table>
 Statistics FilterBenchmark(
-    size_t add_count, const vector<uint64_t>& to_add,
+    size_t add_count, vector<uint64_t> to_add,
     size_t intersectionsize, const std::vector<samples_t> & mixed_sets, bool batchedadd = false, bool remove = false) {
   if (add_count > to_add.size()) {
     throw out_of_range("to_add must contain at least add_count values");

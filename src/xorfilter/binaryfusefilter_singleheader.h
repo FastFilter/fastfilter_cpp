@@ -13,6 +13,22 @@
       // highly unlikely
 #endif
 
+static int binary_fuse_cmpfunc(const void * a, const void * b) {
+   return ( *(const uint64_t*)a - *(const uint64_t*)b );
+}
+
+static size_t binary_fuse_sort_and_remove_dup(uint64_t* keys, size_t length) {
+  qsort(keys, length, sizeof(uint64_t), binary_fuse_cmpfunc);
+  size_t j = 0;
+  for(size_t i = 1; i < length; i++) {
+    if(keys[i] != keys[i-1]) {
+      keys[j] = keys[i];
+      j++;
+    }
+  }
+  return j+1;
+}
+
 /**
  * We start with a few utilities.
  ***/
@@ -60,12 +76,72 @@ typedef struct binary_fuse8_s {
   uint8_t *Fingerprints;
 } binary_fuse8_t;
 
-#ifdef _MSC_VER
-// Windows programmers who target 32-bit platform may need help:
-static inline uint64_t binary_fuse_mulhi(uint64_t a, uint64_t b) { return __umulh(a, b); }
-#else
+// #ifdefs adapted from:
+//  https://stackoverflow.com/a/50958815
+#ifdef __SIZEOF_INT128__  // compilers supporting __uint128, e.g., gcc, clang
 static inline uint64_t binary_fuse_mulhi(uint64_t a, uint64_t b) {
   return ((__uint128_t)a * b) >> 64;
+}
+#elif defined(_M_X64) || defined(_MARM64)   // MSVC
+static inline uint64_t binary_fuse_mulhi(uint64_t a, uint64_t b) {
+  return __umulh(a, b);
+}
+#elif defined(_M_IA64)  // also MSVC
+static inline uint64_t binary_fuse_mulhi(uint64_t a, uint64_t b) {
+  unsigned __int64 hi;
+  (void) _umul128(a, b, &hi);
+  return hi;
+}
+#else  // portable implementation using uint64_t
+static inline uint64_t binary_fuse_mulhi(uint64_t a, uint64_t b) {
+  // Adapted from:
+  //  https://stackoverflow.com/a/51587262
+
+  /*
+        This is implementing schoolbook multiplication:
+
+                a1 a0
+        X       b1 b0
+        -------------
+                   00  LOW PART
+        -------------
+                00
+             10 10     MIDDLE PART
+        +       01
+        -------------
+             01
+        + 11 11        HIGH PART
+        -------------
+  */
+
+  const uint64_t a0 = (uint32_t) a;
+  const uint64_t a1 = a >> 32;
+  const uint64_t b0 = (uint32_t) b;
+  const uint64_t b1 = b >> 32;
+  const uint64_t p11 = a1 * b1;
+  const uint64_t p01 = a0 * b1;
+  const uint64_t p10 = a1 * b0;
+  const uint64_t p00 = a0 * b0;
+
+  // 64-bit product + two 32-bit values
+  const uint64_t middle = p10 + (p00 >> 32) + (uint32_t) p01;
+
+  /*
+    Proof that 64-bit products can accumulate two more 32-bit values
+    without overflowing:
+
+    Max 32-bit value is 2^32 - 1.
+    PSum = (2^32-1) * (2^32-1) + (2^32-1) + (2^32-1)
+         = 2^64 - 2^32 - 2^32 + 1 + 2^32 - 1 + 2^32 - 1
+         = 2^64 - 1
+    Therefore the high half below cannot overflow regardless of input.
+  */
+
+  // high half
+  return p11 + (middle >> 32) + (p01 >> 32);
+
+  // low half (which we don't care about, but here it is)
+  // (middle << 32) | (uint32_t) p00;
 }
 #endif
 
@@ -151,7 +227,7 @@ static inline bool binary_fuse8_allocate(uint32_t size,
     filter->SegmentLength = 262144;
   }
   filter->SegmentLengthMask = filter->SegmentLength - 1;
-  double sizeFactor = binary_fuse_calculate_size_factor(arity, size);
+  double sizeFactor = size <= 1 ? 0 : binary_fuse_calculate_size_factor(arity, size);
   uint32_t capacity = size <= 1 ? 0 : (uint32_t)(round((double)size * sizeFactor));
   uint32_t initSegmentCount =
       (capacity + filter->SegmentLength - 1) / filter->SegmentLength -
@@ -197,7 +273,7 @@ static inline uint8_t binary_fuse_mod3(uint8_t x) {
 // The caller is responsable for calling binary_fuse8_allocate(size,filter)
 // before. For best performance, the caller should ensure that there are not too
 // many duplicated keys.
-static inline bool binary_fuse8_populate(const uint64_t *keys, uint32_t size,
+static inline bool binary_fuse8_populate(uint64_t *keys, uint32_t size,
                            binary_fuse8_t *filter) {
   uint64_t rng_counter = 0x726b2b9d438b9d4d;
   filter->Seed = binary_fuse_rng_splitmix64(&rng_counter);
@@ -230,9 +306,7 @@ static inline bool binary_fuse8_populate(const uint64_t *keys, uint32_t size,
   for (int loop = 0; true; ++loop) {
     if (loop + 1 > XOR_MAX_ITERATIONS) {
       // The probability of this happening is lower than the
-      // the cosmic-ray probability (i.e., a cosmic ray corrupts your system),
-      // but if it happens, we just fill the fingerprint with ones which
-      // will flag all possible keys as 'possible', ensuring a correct result.
+      // the cosmic-ray probability (i.e., a cosmic ray corrupts your system)
       memset(filter->Fingerprints, ~0, filter->ArrayLength);
       free(alone);
       free(t2count);
@@ -240,7 +314,7 @@ static inline bool binary_fuse8_populate(const uint64_t *keys, uint32_t size,
       free(t2hash);
       free(reverseOrder);
       free(startPos);
-      return true;
+      return false;
     }
 
     for (uint32_t i = 0; i < block; i++) {
@@ -345,6 +419,8 @@ static inline bool binary_fuse8_populate(const uint64_t *keys, uint32_t size,
       // success
       size = stacksize;
       break;
+    } else if(duplicates > 0) {
+      size = binary_fuse_sort_and_remove_dup(keys, size);
     }
     memset(reverseOrder, 0, sizeof(uint64_t) * size);
     memset(t2count, 0, sizeof(uint8_t) * capacity);
@@ -439,7 +515,7 @@ static inline bool binary_fuse16_allocate(uint32_t size,
   }
   filter->SegmentLengthMask = filter->SegmentLength - 1;
   double sizeFactor = size <= 1 ? 0 : binary_fuse_calculate_size_factor(arity, size);
-  uint32_t capacity = (uint32_t)(round((double)size * sizeFactor));
+  uint32_t capacity = size <= 1 ? 0 : (uint32_t)(round((double)size * sizeFactor));
   uint32_t initSegmentCount =
       (capacity + filter->SegmentLength - 1) / filter->SegmentLength -
       (arity - 1);
@@ -481,7 +557,7 @@ static inline void binary_fuse16_free(binary_fuse16_t *filter) {
 // The caller is responsable for calling binary_fuse8_allocate(size,filter)
 // before. For best performance, the caller should ensure that there are not too
 // many duplicated keys.
-static inline bool binary_fuse16_populate(const uint64_t *keys, uint32_t size,
+static inline bool binary_fuse16_populate(uint64_t *keys, uint32_t size,
                            binary_fuse16_t *filter) {
   uint64_t rng_counter = 0x726b2b9d438b9d4d;
   filter->Seed = binary_fuse_rng_splitmix64(&rng_counter);
@@ -514,17 +590,14 @@ static inline bool binary_fuse16_populate(const uint64_t *keys, uint32_t size,
   for (int loop = 0; true; ++loop) {
     if (loop + 1 > XOR_MAX_ITERATIONS) {
       // The probability of this happening is lower than the
-      // the cosmic-ray probability (i.e., a cosmic ray corrupts your system),
-      // but if it happens, we just fill the fingerprint with ones which
-      // will flag all possible keys as 'possible', ensuring a correct result.
-      memset(filter->Fingerprints, ~0, filter->ArrayLength * sizeof(uint16_t));
+      // the cosmic-ray probability (i.e., a cosmic ray corrupts your system).
       free(alone);
       free(t2count);
       free(reverseH);
       free(t2hash);
       free(reverseOrder);
       free(startPos);
-      return true;
+      return false;
     }
 
     for (uint32_t i = 0; i < block; i++) {
@@ -629,6 +702,8 @@ static inline bool binary_fuse16_populate(const uint64_t *keys, uint32_t size,
       // success
       size = stacksize;
       break;
+    } else if(duplicates > 0) {
+      size = binary_fuse_sort_and_remove_dup(keys, size);
     }
     memset(reverseOrder, 0, sizeof(uint64_t) * size);
     memset(t2count, 0, sizeof(uint8_t) * capacity);
