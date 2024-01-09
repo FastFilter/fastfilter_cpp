@@ -111,3 +111,4 @@ The prefix filter is from https://github.com/TomerEven/Prefix-Filter.
 * Rust: [1](https://github.com/bnclabs/xorfilter), [2](https://github.com/codri/xorfilter-rs), [3](https://github.com/Polochon-street/rustxorfilter)
 * [Zig](https://github.com/hexops/xorfilter)
 * [Julia](https://github.com/JokingHero/FastFilter.jl)
+* [C#](https://github.com/jonmat/FastIndex)
