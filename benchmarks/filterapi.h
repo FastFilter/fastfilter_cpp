@@ -473,7 +473,7 @@ template <typename filterTable> struct FilterAPI<Prefix_Filter<filterTable>> {
 
 #endif
 
-#ifdef __SSE41__
+#ifdef __SSE4_1__
 template <typename HashFamily>
 struct FilterAPI<SimdBlockFilterFixed16<HashFamily>> {
   using Table = SimdBlockFilterFixed16<HashFamily>;
