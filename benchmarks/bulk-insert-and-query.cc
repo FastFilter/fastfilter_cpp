@@ -133,7 +133,6 @@ size_t count_distinct(InputIt first, InputIt last) {
 size_t match_size(vector<uint64_t> a,  vector<uint64_t> b, size_t * distincta, size_t * distinctb) {
   // could obviously be accelerated with a Bloom filter
   // But this is surprisingly fast!
-  vector<uint64_t> result;
   std::sort(a.begin(), a.end());
   std::sort(b.begin(), b.end());
   if(distincta != NULL) *distincta  = count_distinct(a.begin(), a.end());
