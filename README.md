@@ -85,7 +85,7 @@ The filter implementations are in `src/<type>/`. Most implementations depend on 
 
 ## References
 
-- [Binary Fuse Filters: Fast and Smaller Than Xor Filters](http://arxiv.org/abs/2201.01174), Journal of Experimental Algorithmics (to appear).
+- [Binary Fuse Filters: Fast and Smaller Than Xor Filters](http://arxiv.org/abs/2201.01174), Journal of Experimental Algorithmics 27, 2022.
 - [Xor Filters: Faster and Smaller Than Bloom and Cuckoo Filters](https://arxiv.org/abs/1912.08258), Journal of Experimental Algorithmics 25 (1), 2020
 - [Prefix Filter: Practically and Theoretically Better Than Bloom](https://arxiv.org/abs/2203.17139), PVLDB 15(7), 2022.
 
